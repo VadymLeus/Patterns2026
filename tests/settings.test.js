@@ -26,6 +26,15 @@ describe('Одинак', 'Settings: валюта і тема', () => {
     expect(Math.round(settings().convert(45000))).toBe(1000);
   });
 
+  it('toUah() переводить суму з вибраної валюти назад у гривні', () => {
+    expect(settings().toUah(1234)).toBe(1234);
+    quiet(() => settings().setCurrency('USD'));
+    expect(Math.round(settings().toUah(1000))).toBe(41500);
+    expect(Math.round(settings().toUah(settings().convert(37000)))).toBe(37000);
+    quiet(() => settings().setCurrency('EUR'));
+    expect(Math.round(settings().toUah(1000))).toBe(45000);
+  });
+
   it('формат гривні: число та «грн»', () => {
     const text = settings().format(43800);
     expect(text.replace(/\D/g, '')).toBe('43800');

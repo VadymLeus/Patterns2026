@@ -4,7 +4,7 @@
 //   Фабричний метод   — getCreator(...).create(...)        (відеокарта, пам'ять, накопичувач, БЖ, корпус, кулер)
 //   Абстрактна фабрика— getPlatformFactory(...)             (процесор + плата одного сімейства)
 //                       getTierFactory(...)                 (комплект деталей одного рівня)
-//   Будівельник       — PCBuilder (+ PCDirector для готових збірок)
+//   Будівельник       — PCBuilder (+ PCDirector: готові збірки та підбір під бюджет)
 //   Прототип          — PC.clone(), PresetRegistry
 
 // ---------- Стан застосунку ----------
@@ -40,6 +40,7 @@ const saved = []; // зібрані користувачем ПК
 const storage = new BuildStorage(); // localStorage
 const persist = () => storage.save(saved.map((pc) => PCSerializer.toData(pc)));
 const selects = {}; // slot -> <select>
+const dropdowns = {}; // slot (або службовий ключ) -> Dropdown
 let factory = null; // поточна фабрика платформи
 
 // ---------- Створення деталей ----------
@@ -57,7 +58,9 @@ function optionsFor(slot) {
 
 // ---------- Випадаючі списки ----------
 function labelOption(opt) {
-  opt.textContent = `${opt.dataset.label} — ${fmt(prices.getPrice(opt.value))}`;
+  const price = fmt(prices.getPrice(opt.value));
+  opt.textContent = `${opt.dataset.label} — ${price}`; // запасний текст рідного <select>
+  opt.dataset.price = price; // його показує Dropdown
 }
 
 function refreshLabels() {
@@ -71,6 +74,7 @@ function fillSelect(slot, items, selectedId) {
     const opt = document.createElement('option');
     opt.value = item.id;
     opt.dataset.label = Catalog.label(item);
+    Object.assign(opt.dataset, Catalog.parts(item)); // title і meta для Dropdown
     labelOption(opt);
     sel.append(opt);
   });
@@ -79,15 +83,32 @@ function fillSelect(slot, items, selectedId) {
 
 function buildSlotControls() {
   PC_SLOTS.forEach(({ key, label }) => {
-    const wrap = document.createElement('label');
+    const wrap = document.createElement('div');
     wrap.className = 'field';
-    wrap.innerHTML = `<span>${esc(label)}</span><select id="sel-${key}"></select>`;
+    wrap.innerHTML = `<span id="lbl-${key}">${esc(label)}</span><select id="sel-${key}" aria-labelledby="lbl-${key}"></select>`;
     $('slots').append(wrap);
     selects[key] = wrap.querySelector('select');
     selects[key].addEventListener('change', () => onPartChosen(key));
+    dropdowns[key] = new Dropdown(selects[key], { labelledBy: `lbl-${key}` });
   });
   // Списки процесорів і плат заповнює applyPlatform(); решта не залежить від платформи
   ['cooler', 'ram', 'gpu', 'storage', 'psu', 'case'].forEach((slot) => fillSelect(slot, Catalog.byType(slot)));
+}
+
+// Позначає варіанти списку, що дали б конфлікт у поточній збірці (їх показує Dropdown):
+// деталь підставляється замість обраної, а Compatibility.check() каже, що зламається.
+// Викликається після кожної зміни, тому позначки завжди свіжі
+function markIncompatible(slot) {
+  const current = builder.snapshot();
+  const before = new Set(Compatibility.check(current).problems);
+  logger.silently(() => {
+    [...selects[slot].options].forEach((opt) => {
+      const { conflicts } = Compatibility.check({ ...current, [slot]: createPart(slot, opt.value) });
+      // конфлікт самої деталі або новий, який вона спричинила (скажімо, слабкий блок живлення після заміни відеокарти)
+      const found = conflicts.find((c) => c.slots.includes(slot) || !before.has(c.message));
+      opt.dataset.warn = found ? found.message : '';
+    });
+  });
 }
 
 // Підставляє фабрику платформи та заповнює списки процесорів і плат лише з її сімейства
@@ -214,6 +235,7 @@ function renderSummary() {
   } else {
     $('power').textContent = '—';
   }
+  renderPerf();
 }
 
 function renderPresets() {
@@ -252,11 +274,127 @@ function renderView() {
   pcView.update(builder.snapshot(), builder.validate().conflicts);
 }
 
+// Умовна оцінка продуктивності (analysis/Performance.js): три смужки від 0 до 100
+function renderPerf() {
+  const scores = Performance.all(builder.snapshot());
+  if (!$('perf').children.length) {
+    $('perf').innerHTML = Object.entries(Performance.PURPOSES)
+      .map(
+        ([key, { label, hint }]) =>
+          `<div class="perf-row" data-key="${key}" title="${esc(hint)}"><span>${esc(label)}</span><div class="meter"><i></i></div><b></b></div>`
+      )
+      .join('');
+  }
+  $('perf').querySelectorAll('.perf-row').forEach((row) => {
+    const value = scores[row.dataset.key];
+    row.querySelector('i').style.width = `${value ?? 0}%`;
+    row.querySelector('b').textContent = value ?? '—';
+  });
+}
+
+// ---------- Порівняння збірок ----------
+function compareSources() {
+  const list = [{ group: 'Конфігуратор', value: 'current', pc: { name: 'Поточна конфігурація', parts: builder.snapshot() } }];
+  presets.list().forEach((p) => {
+    // Клон потрібен лише для читання; назву беремо зі зразка (без «(копія)»)
+    const clone = logger.silently(() => presets.get(p.key));
+    list.push({ group: 'Готові збірки', value: `preset:${p.key}`, pc: { name: p.name, parts: clone.parts } });
+  });
+  saved.forEach((pc) => list.push({ group: 'Зібрані ПК', value: `saved:${pc.id}`, pc }));
+  return list;
+}
+
+const shortName = (part) => part.name.replace(/^(Intel Core |AMD |GeForce |Radeon )/, '');
+
+function fillCompareSelect(select, sources, fallback) {
+  const wanted = select.value;
+  select.innerHTML = '';
+  let group = null;
+  let groupName = null;
+  sources.forEach(({ group: name, value, pc }) => {
+    if (name !== groupName) {
+      group = document.createElement('optgroup');
+      group.label = groupName = name;
+      select.append(group);
+    }
+    const opt = document.createElement('option');
+    opt.value = value;
+    opt.textContent = opt.dataset.title = pc.name;
+    opt.dataset.meta = [pc.parts.cpu, pc.parts.gpu].filter(Boolean).map(shortName).join(' · ');
+    opt.dataset.price = fmt(Comparison.value('price', pc.parts));
+    group.append(opt);
+  });
+  select.value = sources.some((s) => s.value === wanted) ? wanted : fallback;
+}
+
+const COMPARE_UNITS = {
+  money: (v) => fmt(v),
+  watts: (v) => `${v} Вт`,
+  score: (v) => `${v}/100`,
+  gb: (v) => (v >= 1000 ? `${v / 1000} ТБ` : `${v} ГБ`),
+};
+
+function compareVerdict(result, a, b) {
+  if (result.identical) return ['Збірки однакові: усі деталі збігаються.'];
+  const metric = (key) => result.metrics.find((m) => m.key === key);
+  const name = (winner) => `<strong>${esc(winner === 'a' ? a.name : b.name)}</strong>`;
+  const lines = [];
+  const add = (key, text) => {
+    const m = metric(key);
+    if (m.winner === 'a' || m.winner === 'b') lines.push(text(m));
+  };
+  add('price', (m) => `${name(m.winner)} дешевша на ${esc(fmt(m.diff))}`);
+  add('gaming', (m) => `${name(m.winner)} краща для ігор: ${Math.max(m.a, m.b)} проти ${Math.min(m.a, m.b)}`);
+  add('workstation', (m) => `${name(m.winner)} краща для роботи: ${Math.max(m.a, m.b)} проти ${Math.min(m.a, m.b)}`);
+  add('power', (m) => `${name(m.winner)} економніша: на ${m.diff} Вт менше споживання`);
+  return lines.length ? lines : ['За ціною та продуктивністю збірки рівні.'];
+}
+
+function renderCompare() {
+  const sources = compareSources();
+  fillCompareSelect($('cmpA'), sources, 'current');
+  fillCompareSelect($('cmpB'), sources, 'preset:office');
+  dropdowns.cmpA.sync();
+  dropdowns.cmpB.sync();
+
+  const pick = (select) => sources.find((s) => s.value === select.value).pc;
+  const a = pick($('cmpA'));
+  const b = pick($('cmpB'));
+  const result = Comparison.compare(a, b);
+
+  const cell = (part, same) =>
+    `<td class="${same ? '' : 'diff'}">${part ? `${esc(part.name)}<small>${fmt(part.price)}</small>` : '—'}</td>`;
+  const slotRows = result.rows
+    .map((r) => `<tr><th scope="row">${esc(r.label)}</th>${cell(r.a, r.same)}${cell(r.b, r.same)}</tr>`)
+    .join('');
+  const metricCell = (m, side) =>
+    `<td class="${m.winner === side ? 'best' : ''}">${m[side] === null ? '—' : COMPARE_UNITS[m.unit](m[side])}</td>`;
+  const metricRows = result.metrics
+    .map((m) => `<tr><th scope="row">${esc(m.label)}</th>${metricCell(m, 'a')}${metricCell(m, 'b')}</tr>`)
+    .join('');
+
+  $('compareOut').innerHTML = `
+    <ul class="verdict">${compareVerdict(result, a, b).map((t) => `<li>${t}</li>`).join('')}</ul>
+    <div class="table-wrap"><table class="cmp">
+      <thead><tr><th></th><th>${esc(a.name)}</th><th>${esc(b.name)}</th></tr></thead>
+      <tbody>${slotRows}<tr class="sep"><th colspan="3">Показники</th></tr>${metricRows}</tbody>
+    </table></div>`;
+}
+
+['cmpA', 'cmpB'].forEach((id) => $(id).addEventListener('change', renderCompare));
+
+function syncDropdowns() {
+  PC_SLOTS.forEach(({ key }) => markIncompatible(key));
+  Object.values(dropdowns).forEach((dropdown) => dropdown.sync());
+}
+
 function render() {
   renderView();
   renderSummary();
   renderPresets();
   renderSaved();
+  renderCompare();
+  syncDropdowns();
 }
 
 // ---------- Події ----------
@@ -269,6 +407,15 @@ document.querySelectorAll('input[name="tier"]').forEach((radio) =>
 );
 
 // Налаштування (Одинак Settings): тема застосовується тут, валюта — через fmt()
+const systemDark = window.matchMedia('(prefers-color-scheme: dark)');
+const isDark = () => settings.theme === 'dark' || (settings.theme === 'auto' && systemDark.matches);
+
+function updateThemeToggle() {
+  const dark = isDark();
+  $('themeToggle').setAttribute('aria-checked', String(dark));
+  $('themeToggle').title = `${dark ? 'Увімкнути світлу тему' : 'Увімкнути темну тему'} (Shift + клік — як у системі)`;
+}
+
 function applyTheme() {
   const root = document.documentElement;
   // Під час перемикання вимикаємо CSS-переходи, щоб схема не «блимала» старими кольорами
@@ -277,10 +424,12 @@ function applyTheme() {
   else root.dataset.theme = settings.theme;
   void root.offsetWidth; // застосувати нові кольори до зняття класу
   requestAnimationFrame(() => root.classList.remove('theme-switching'));
+  updateThemeToggle();
 }
 
+systemDark.addEventListener('change', updateThemeToggle);
+$('themeToggle').addEventListener('click', (e) => settings.setTheme(e.shiftKey ? 'auto' : isDark() ? 'light' : 'dark'));
 $('currencySelect').addEventListener('change', (e) => settings.setCurrency(e.target.value));
-$('themeSelect').addEventListener('change', (e) => settings.setTheme(e.target.value));
 
 $('discount').addEventListener('change', (e) => {
   e.target.value = prices.setDiscount(e.target.value);
@@ -311,6 +460,58 @@ $('saved').addEventListener('click', (e) => {
   }
   render();
 });
+
+// ---------- Збірка під бюджет (Будівельник: PCDirector) ----------
+let budgetUah = 45000; // бюджет зберігаємо в гривнях, а в полі показуємо у вибраній валюті
+
+function renderBudgetInput() {
+  $('budget').value = Math.round(settings.convert(budgetUah));
+  $('budget').step = Math.max(1, Math.round(settings.convert(500)));
+  $('budgetHint').textContent = { UAH: 'у гривнях', USD: 'у доларах', EUR: 'у євро' }[settings.currency];
+}
+
+function setAutoMsg(text = '', kind = '') {
+  $('autoMsg').textContent = text;
+  $('autoMsg').className = 'msg ' + kind;
+}
+
+function onAutoBuild() {
+  const value = Number($('budget').value);
+  if (!(value > 0)) return setAutoMsg('Вкажіть бюджет: додатне число', 'bad');
+  const budget = Math.round(settings.toUah(value));
+  const purpose = document.querySelector('input[name="purpose"]:checked').value;
+  const platform = document.querySelector('input[name="autoPlatform"]:checked').value;
+  const label = Performance.PURPOSES[purpose].label;
+
+  try {
+    const pc = new PCDirector(new PCBuilder()).buildForBudget(budget, { purpose, platform, name: `${label} · ${fmt(budget)}` });
+    loadPc(pc);
+    const left = budget - pc.totalPrice;
+    const score = Math.round(Performance.score(pc.parts, purpose));
+    setAutoMsg(
+      `Підібрано за ${fmt(pc.totalPrice)} із ${fmt(budget)}${left > 0 ? ` (залишок ${fmt(left)})` : ''}. ` +
+        `Оцінка для «${label}»: ${score} із 100. Збірку завантажено в конфігуратор.`,
+      'ok'
+    );
+  } catch (err) {
+    if (!(err instanceof BudgetError)) throw err;
+    setAutoMsg(
+      err.minBudget === null
+        ? 'У каталозі немає сумісних комплектуючих для цих умов'
+        : `За ${fmt(budget)} збірку для «${label}» не зібрати: потрібно щонайменше ${fmt(err.minBudget)}`,
+      'bad'
+    );
+  }
+}
+
+$('budget').addEventListener('input', (e) => {
+  const value = Number(e.target.value);
+  if (value > 0) budgetUah = settings.toUah(value);
+});
+$('budget').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') onAutoBuild();
+});
+$('autoBtn').addEventListener('click', onAutoBuild);
 
 // ---------- Експорт / імпорт JSON ----------
 function setSavedMsg(text = '', kind = '') {
@@ -356,8 +557,11 @@ $('importFile').addEventListener('change', async (e) => {
 settings.restore(settingsStorage.load()); // збережені валюта й тема
 applyTheme();
 $('currencySelect').value = settings.currency;
-$('themeSelect').value = settings.theme;
+dropdowns.currency = new Dropdown($('currencySelect'), { compact: true, labelledBy: 'lbl-currency' });
 buildSlotControls();
+dropdowns.cmpA = new Dropdown($('cmpA'), { labelledBy: 'lbl-cmpA', searchFrom: 8 });
+dropdowns.cmpB = new Dropdown($('cmpB'), { labelledBy: 'lbl-cmpB', searchFrom: 8 });
+renderBudgetInput();
 
 // Одинак: другий new повертає той самий об'єкт
 logger.log('Одинак', `new PriceList() === PriceList.getInstance() → ${new PriceList() === prices}`);
@@ -387,5 +591,6 @@ settings.subscribe(() => {
   applyTheme();
   settingsStorage.save(settings.toData());
   refreshLabels();
+  renderBudgetInput();
   render();
 });

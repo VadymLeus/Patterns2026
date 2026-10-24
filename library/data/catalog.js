@@ -1,16 +1,16 @@
-// Каталог комплектуючих. Ціни умовні, у гривнях.
+// Каталог комплектуючих. Ціни та бали продуктивності (perf) умовні, ціни — у гривнях.
 // Це лише ДАНІ. Самі об'єкти комплектуючих створюють фабрики
 // (library/factoryMethod та library/abstractFactory).
 
 const CATALOG = [
   // ---------- Процесори (створює абстрактна фабрика платформи) ----------
-  { id: 'i3-12100f', type: 'cpu', platform: 'intel', name: 'Intel Core i3-12100F', cores: 4, tdp: 58, price: 3600 },
-  { id: 'i5-12400f', type: 'cpu', platform: 'intel', name: 'Intel Core i5-12400F', cores: 6, tdp: 65, price: 5800 },
-  { id: 'i5-13600k', type: 'cpu', platform: 'intel', name: 'Intel Core i5-13600K', cores: 14, tdp: 125, price: 13500 },
-  { id: 'i7-13700k', type: 'cpu', platform: 'intel', name: 'Intel Core i7-13700K', cores: 16, tdp: 125, price: 17500 },
-  { id: 'r5-7600', type: 'cpu', platform: 'amd', name: 'AMD Ryzen 5 7600', cores: 6, tdp: 65, price: 8900 },
-  { id: 'r7-7700x', type: 'cpu', platform: 'amd', name: 'AMD Ryzen 7 7700X', cores: 8, tdp: 105, price: 13500 },
-  { id: 'r9-7900x', type: 'cpu', platform: 'amd', name: 'AMD Ryzen 9 7900X', cores: 12, tdp: 170, price: 20500 },
+  { id: 'i3-12100f', type: 'cpu', platform: 'intel', name: 'Intel Core i3-12100F', cores: 4, tdp: 58, perf: 140, price: 3600 },
+  { id: 'i5-12400f', type: 'cpu', platform: 'intel', name: 'Intel Core i5-12400F', cores: 6, tdp: 65, perf: 195, price: 5800 },
+  { id: 'i5-13600k', type: 'cpu', platform: 'intel', name: 'Intel Core i5-13600K', cores: 14, tdp: 125, perf: 385, price: 13500 },
+  { id: 'i7-13700k', type: 'cpu', platform: 'intel', name: 'Intel Core i7-13700K', cores: 16, tdp: 125, perf: 465, price: 17500 },
+  { id: 'r5-7600', type: 'cpu', platform: 'amd', name: 'AMD Ryzen 5 7600', cores: 6, tdp: 65, perf: 275, price: 8900 },
+  { id: 'r7-7700x', type: 'cpu', platform: 'amd', name: 'AMD Ryzen 7 7700X', cores: 8, tdp: 105, perf: 355, price: 13500 },
+  { id: 'r9-7900x', type: 'cpu', platform: 'amd', name: 'AMD Ryzen 9 7900X', cores: 12, tdp: 170, perf: 520, price: 20500 },
 
   // ---------- Материнські плати (абстрактна фабрика платформи) ----------
   { id: 'h610m', type: 'motherboard', platform: 'intel', name: 'Intel H610M · mATX · DDR4', formFactor: 'mATX', ramType: 'DDR4', price: 2800 },
@@ -35,12 +35,12 @@ const CATALOG = [
   { id: 'ddr5-64', type: 'ram', name: '64 ГБ DDR5-6000', ramType: 'DDR5', sizeGb: 64, price: 8300 },
 
   // ---------- Відеокарти (фабричний метод) ----------
-  { id: 'gt1030', type: 'gpu', name: 'GeForce GT 1030 2 ГБ', tdp: 30, price: 2800 },
-  { id: 'rtx3060', type: 'gpu', name: 'GeForce RTX 3060 12 ГБ', tdp: 170, price: 14500 },
-  { id: 'rtx4060', type: 'gpu', name: 'GeForce RTX 4060 8 ГБ', tdp: 115, price: 15500 },
-  { id: 'rtx4070', type: 'gpu', name: 'GeForce RTX 4070 12 ГБ', tdp: 200, price: 27000 },
-  { id: 'rx7600', type: 'gpu', name: 'Radeon RX 7600 8 ГБ', tdp: 165, price: 12800 },
-  { id: 'rx7800xt', type: 'gpu', name: 'Radeon RX 7800 XT 16 ГБ', tdp: 263, price: 25500 },
+  { id: 'gt1030', type: 'gpu', name: 'GeForce GT 1030 2 ГБ', tdp: 30, perf: 10, price: 2800 },
+  { id: 'rtx3060', type: 'gpu', name: 'GeForce RTX 3060 12 ГБ', tdp: 170, perf: 87, price: 14500 },
+  { id: 'rtx4060', type: 'gpu', name: 'GeForce RTX 4060 8 ГБ', tdp: 115, perf: 106, price: 15500 },
+  { id: 'rtx4070', type: 'gpu', name: 'GeForce RTX 4070 12 ГБ', tdp: 200, perf: 175, price: 27000 },
+  { id: 'rx7600', type: 'gpu', name: 'Radeon RX 7600 8 ГБ', tdp: 165, perf: 105, price: 12800 },
+  { id: 'rx7800xt', type: 'gpu', name: 'Radeon RX 7800 XT 16 ГБ', tdp: 263, perf: 195, price: 25500 },
 
   // ---------- Накопичувачі (фабричний метод) ----------
   { id: 'ssd-480', type: 'storage', name: 'SSD SATA 480 ГБ', kind: 'SSD', sizeGb: 480, price: 1100 },
@@ -74,11 +74,53 @@ class Catalog {
     return CATALOG.filter((c) => c.type === type && (platform === null || c.platform === platform));
   }
 
+  // «4 ядра», «6 ядер»
+  static coresWord(n) {
+    const last = n % 10;
+    const teen = n % 100 >= 11 && n % 100 <= 14;
+    return `${n} ${!teen && last >= 2 && last <= 4 ? 'ядра' : last === 1 && !teen ? 'ядро' : 'ядер'}`;
+  }
+
+  // Назва для кастомного випадаючого списку: головний рядок і додаткові характеристики
+  //   «AMD B650 · ATX · DDR5»        -> { title: 'AMD B650', meta: 'ATX · DDR5' }
+  //   «Midi Tower (ATX / mATX)»      -> { title: 'Midi Tower', meta: 'ATX / mATX' }
+  //   процесор, відеокарта, ОЗП, накопичувач, БЖ — з їхніх характеристик
+  static parts(item) {
+    const trailing = (text, pattern) => {
+      const m = text.match(pattern);
+      return m ? [m[1], m[2]] : [text, ''];
+    };
+    switch (item.type) {
+      case 'cpu':
+        return { title: item.name, meta: `${Catalog.coresWord(item.cores)} · ${item.tdp} Вт` };
+      case 'gpu': {
+        const [title, memory] = trailing(item.name, /^(.*?)\s+(\d+\s?ГБ)$/);
+        return { title, meta: [memory, `${item.tdp} Вт`].filter(Boolean).join(' · ') };
+      }
+      case 'ram': {
+        const [size, speed] = trailing(item.name, /^(\d+\s?ГБ)\s+(.+)$/);
+        return { title: size, meta: speed };
+      }
+      case 'storage': {
+        const [title, size] = trailing(item.name, /^(.*?)\s+(\d+\s?[ГТ]Б)$/);
+        return { title, meta: size };
+      }
+      case 'psu':
+        return { title: `${item.watts} Вт`, meta: 'Блок живлення' };
+      default: {
+        const [head, ...rest] = item.name.split(' · ');
+        const bracket = head.match(/^(.*?)\s*\((.+)\)$/);
+        if (bracket) rest.unshift(bracket[2]);
+        return { title: bracket ? bracket[1] : head, meta: rest.join(' · ') };
+      }
+    }
+  }
+
   // Підпис для випадаючого списку
   static label(item) {
     switch (item.type) {
       case 'cpu':
-        return `${item.name} · ${item.cores} ядер · ${item.tdp} Вт`;
+        return `${item.name} · ${Catalog.coresWord(item.cores)} · ${item.tdp} Вт`;
       case 'gpu':
         return `${item.name} · ${item.tdp} Вт`;
       default:

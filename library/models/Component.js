@@ -26,6 +26,7 @@ class Cpu extends Component {
     super(data);
     this.cores = data.cores;
     this.tdp = data.tdp;
+    this.perf = data.perf; // умовні бали продуктивності, див. analysis/Performance.js
     this.vendor = null;
     this.socket = null;
   }
@@ -59,6 +60,7 @@ class Gpu extends Component {
   constructor(data) {
     super(data);
     this.tdp = data.tdp;
+    this.perf = data.perf;
   }
 }
 

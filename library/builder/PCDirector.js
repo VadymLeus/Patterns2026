@@ -1,6 +1,7 @@
 // Директор (Director) — знає РЕЦЕПТИ готових збірок.
 // Будівельник вміє збирати будь-що, директор — які саме деталі й у якому порядку
-// потрібні для типової конфігурації.
+// потрібні для типової конфігурації. Рецепти бувають готові (buildOffice, buildGaming,
+// buildWorkstation) і складені на льоту під бюджет (buildForBudget).
 //
 // Тут усі патерни працюють разом:
 //   - процесор і плату директор бере з абстрактної фабрики платформи,
@@ -58,6 +59,54 @@ class PCDirector {
       .setStorage(getCreator('storage').create('nvme-2tb'))
       .setPsu(getCreator('psu').create('psu-850'))
       .setCase(getCreator('case').create('case-atx'))
+      .build();
+  }
+
+  // Збірка під бюджет. Директор не знає, які деталі брати, а САМ ПІДБИРАЄ їх:
+  //   1. фабрики платформ і творці створюють кандидатів (процесори й плати — лише з обраних сімейств);
+  //   2. BudgetPlanner вибирає найкращу сумісну комбінацію в межах бюджету;
+  //   3. будівельник збирає її й ще раз перевіряє сумісність.
+  // Якщо бюджету замало — BudgetError із найменшою потрібною сумою.
+  buildForBudget(budget, { purpose = 'gaming', platform = 'any', name } = {}) {
+    const logger = Logger.getInstance();
+    const platforms = platform === 'any' ? ['intel', 'amd'] : [platform];
+    const factories = platforms.map((key) => getPlatformFactory(key)); // невідома платформа — помилка тут
+
+    // Кандидатів створюємо мовчки, щоб журнал не вкрили сотні рядків, а підсумок запишемо нижче
+    const pool = logger.silently(() => ({
+      cpu: factories.flatMap((f) => f.cpuOptions().map((o) => f.createCpu(o.id))),
+      motherboard: factories.flatMap((f) => f.motherboardOptions().map((o) => f.createMotherboard(o.id))),
+      ...Object.fromEntries(
+        ['cooler', 'ram', 'gpu', 'storage', 'psu', 'case'].map((type) => [
+          type,
+          Catalog.byType(type).map((o) => getCreator(type).create(o.id)),
+        ])
+      ),
+    }));
+    logger.log(
+      'Абстрактна фабрика',
+      `${factories.map((f) => f.constructor.name).join(' і ')}: створено кандидатів — ${pool.cpu.length} процесорів і ${pool.motherboard.length} плат`
+    );
+    logger.log('Фабричний метод', 'Творці створили кандидатів решти деталей: кулери, пам’ять, відеокарти, накопичувачі, БЖ, корпуси');
+
+    const plan = BudgetPlanner.plan(pool, budget, purpose);
+    const label = Performance.PURPOSES[purpose].label;
+    logger.log(
+      'Будівельник',
+      `PCDirector.buildForBudget: перебрано ${plan.combos} сумісних комбінацій, найкраща для «${label}» — ${plan.cost} грн, оцінка ${Math.round(plan.score)}/100`
+    );
+
+    return this.builder
+      .reset()
+      .setName(name || `Автозбірка: ${label}`)
+      .setCpu(plan.parts.cpu)
+      .setMotherboard(plan.parts.motherboard)
+      .setCooler(plan.parts.cooler)
+      .setRam(plan.parts.ram)
+      .setGpu(plan.parts.gpu)
+      .setStorage(plan.parts.storage)
+      .setPsu(plan.parts.psu)
+      .setCase(plan.parts.case)
       .build();
   }
 }

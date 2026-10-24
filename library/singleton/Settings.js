@@ -54,6 +54,11 @@ class Settings {
     return amountUah * Settings.CURRENCIES[this.#currency].perUah;
   }
 
+  // Вибрана валюта -> гривні (для полів, куди користувач вводить суму)
+  toUah(amount) {
+    return amount / Settings.CURRENCIES[this.#currency].perUah;
+  }
+
   // Гривні -> готовий текст у вибраній валюті
   format(amountUah) {
     return Settings.CURRENCIES[this.#currency].format(this.convert(amountUah));

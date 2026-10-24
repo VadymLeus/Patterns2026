@@ -30,29 +30,60 @@
         <li class="badge p-prototype">Прототип</li>
       </ul>
       <div class="tools">
-        <label>Валюта <span class="hint">умовний курс</span>
-          <select id="currencySelect">
+        <div class="tool">
+          <span id="lbl-currency">Валюта <span class="hint">умовний курс</span></span>
+          <select id="currencySelect" aria-labelledby="lbl-currency">
             <option value="UAH">₴ Гривня</option>
             <option value="USD">$ Долар</option>
             <option value="EUR">€ Євро</option>
           </select>
-        </label>
-        <label>Тема
-          <select id="themeSelect">
-            <option value="auto">Авто</option>
-            <option value="light">Світла</option>
-            <option value="dark">Темна</option>
-          </select>
-        </label>
+        </div>
+        <button id="themeToggle" class="theme-toggle" type="button" role="switch" aria-checked="false"
+                aria-label="Темна тема" title="Перемкнути тему (Shift + клік — як у системі)">
+          <svg class="ico sun" viewBox="0 0 24 24" aria-hidden="true">
+            <circle cx="12" cy="12" r="4.2"/>
+            <path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M5.3 18.7l1.6-1.6M17.1 6.9l1.6-1.6"/>
+          </svg>
+          <svg class="ico moon" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M20.2 14.6A8.6 8.6 0 0 1 9.4 3.8a8.6 8.6 0 1 0 10.8 10.8z"/>
+          </svg>
+          <span class="thumb"></span>
+        </button>
       </div>
     </div>
   </header>
 
   <main class="layout">
-    <section class="card wide">
-      <h2>Готові збірки <span class="hint">клонуються з прототипів</span></h2>
-      <div id="presets" class="presets"></div>
-    </section>
+    <div class="quick wide">
+      <section class="card">
+        <h2>Готові збірки <span class="hint">клонуються з прототипів</span></h2>
+        <div id="presets" class="presets"></div>
+      </section>
+
+      <section class="card auto">
+        <h2>Підібрати під бюджет <span class="hint">директор сам обирає деталі</span></h2>
+        <div class="auto-form">
+          <label class="field budget">
+            <span>Бюджет <span id="budgetHint" class="hint"></span></span>
+            <input id="budget" type="number" min="0" step="500" inputmode="numeric">
+          </label>
+          <fieldset class="field platform">
+            <legend>Для чого</legend>
+            <label class="seg"><input type="radio" name="purpose" value="office"><span>Офіс</span></label>
+            <label class="seg"><input type="radio" name="purpose" value="gaming" checked><span>Ігри</span></label>
+            <label class="seg"><input type="radio" name="purpose" value="workstation"><span>Робота</span></label>
+          </fieldset>
+          <fieldset class="field platform">
+            <legend>Платформа</legend>
+            <label class="seg"><input type="radio" name="autoPlatform" value="any" checked><span>Будь-яка</span></label>
+            <label class="seg"><input type="radio" name="autoPlatform" value="intel"><span>Intel</span></label>
+            <label class="seg"><input type="radio" name="autoPlatform" value="amd"><span>AMD</span></label>
+          </fieldset>
+        </div>
+        <button id="autoBtn" class="btn primary" type="button">Підібрати збірку</button>
+        <p id="autoMsg" class="msg" role="status"></p>
+      </section>
+    </div>
 
     <section class="card">
       <h2>Конфігуратор</h2>
@@ -183,6 +214,8 @@
         </dl>
         <p id="totalNote" class="muted small"></p>
 
+        <div id="perf" class="perf" aria-label="Умовна оцінка продуктивності, від 0 до 100"></div>
+
         <button id="buildBtn" class="btn primary" type="button">Зібрати ПК</button>
         <p id="buildMsg" class="msg" role="status"></p>
       </section>
@@ -200,6 +233,22 @@
       <p id="savedMsg" class="msg" role="status"></p>
       <p id="savedEmpty" class="muted">Поки порожньо. Налаштуйте збірку й натисніть «Зібрати ПК».</p>
       <div id="saved" class="saved"></div>
+    </section>
+
+    <section class="card wide">
+      <h2>Порівняння збірок <span class="hint">поточна, готові та зібрані ПК</span></h2>
+      <div class="compare-pick">
+        <div class="field">
+          <span id="lbl-cmpA">Збірка A</span>
+          <select id="cmpA" aria-labelledby="lbl-cmpA"></select>
+        </div>
+        <div class="vs" aria-hidden="true">проти</div>
+        <div class="field">
+          <span id="lbl-cmpB">Збірка B</span>
+          <select id="cmpB" aria-labelledby="lbl-cmpB"></select>
+        </div>
+      </div>
+      <div id="compareOut" class="compare-out"></div>
     </section>
 
     <section class="card wide">
@@ -237,7 +286,12 @@
   <!-- Будівельник -->
   <script src="library/builder/Compatibility.js"></script>
   <script src="library/builder/PCBuilder.js"></script>
+  <script src="library/builder/BudgetPlanner.js"></script>
   <script src="library/builder/PCDirector.js"></script>
+
+  <!-- Аналіз збірок (не патерн: оцінка продуктивності й порівняння) -->
+  <script src="library/analysis/Performance.js"></script>
+  <script src="library/analysis/Comparison.js"></script>
 
   <!-- Збереження збірок (не патерн: збірка відновлюється через фабрики та будівельник) -->
   <script src="library/persistence/PCSerializer.js"></script>
@@ -247,6 +301,7 @@
   <!-- Візуалізація (не патерн, лише відображення) -->
   <script src="ui/patternBadges.js"></script>
   <script src="ui/PcView.js"></script>
+  <script src="ui/Dropdown.js"></script>
 
   <script src="script.js"></script>
 </body>

@@ -8,4 +8,6 @@ const PATTERN_CLASS = {
   'Будівельник': 'p-builder',
   'Прототип': 'p-prototype',
   'Збереження': 'p-storage',
+  'Аналіз': 'p-analysis',
+  'Інтерфейс': 'p-ui',
 };
