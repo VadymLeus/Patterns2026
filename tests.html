@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Тести — Конструктор ПК</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="tests/tests.css">
+</head>
+<body>
+  <header class="top">
+    <div>
+      <h1>Тести патернів</h1>
+      <p class="muted"><a href="index.html">← До застосунку</a> · тести запускаються автоматично під час відкриття сторінки</p>
+    </div>
+    <p id="summary" class="summary"></p>
+  </header>
+
+  <main id="results" class="results"></main>
+
+  <!-- Бібліотека (без інтерфейсу): той самий набір файлів, що й в index.html -->
+  <script src="library/data/catalog.js"></script>
+  <script src="library/models/Component.js"></script>
+  <script src="library/singleton/Logger.js"></script>
+  <script src="library/singleton/PriceList.js"></script>
+  <script src="library/factoryMethod/ComponentCreator.js"></script>
+  <script src="library/factoryMethod/creators.js"></script>
+  <script src="library/abstractFactory/PlatformFactory.js"></script>
+  <script src="library/abstractFactory/products.js"></script>
+  <script src="library/abstractFactory/IntelFactory.js"></script>
+  <script src="library/abstractFactory/AmdFactory.js"></script>
+  <script src="library/abstractFactory/platforms.js"></script>
+  <script src="library/prototype/PC.js"></script>
+  <script src="library/prototype/PresetRegistry.js"></script>
+  <script src="library/builder/Compatibility.js"></script>
+  <script src="library/builder/PCBuilder.js"></script>
+  <script src="library/builder/PCDirector.js"></script>
+  <script src="library/persistence/PCSerializer.js"></script>
+  <script src="library/persistence/BuildStorage.js"></script>
+  <script src="ui/patternBadges.js"></script>
+
+  <!-- Тест-раннер і самі тести -->
+  <script src="tests/runner.js"></script>
+  <script src="tests/singleton.test.js"></script>
+  <script src="tests/factoryMethod.test.js"></script>
+  <script src="tests/abstractFactory.test.js"></script>
+  <script src="tests/builder.test.js"></script>
+  <script src="tests/prototype.test.js"></script>
+  <script src="tests/persistence.test.js"></script>
+  <script src="tests/render.js"></script>
+</body>
+</html>

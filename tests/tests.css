@@ -1,0 +1,24 @@
+.summary { margin: 0; font-size: 1.1rem; font-weight: 700; }
+.summary.ok { color: var(--ok); }
+.summary.bad { color: var(--bad); }
+
+.results {
+  max-width: 2200px;
+  margin: 0 auto;
+  padding: 12px var(--pad) 48px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(440px, 100%), 1fr));
+  gap: 16px;
+  align-items: start;
+}
+
+.suite h2 { flex-wrap: wrap; }
+.suite .count { margin-left: auto; font-size: 0.85rem; font-weight: 600; color: var(--muted); }
+.suite ul { list-style: none; margin: 0; padding: 0; }
+.suite li { display: flex; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--line); font-size: 0.9rem; }
+.suite li:last-child { border-bottom: 0; }
+.suite .mark { flex: none; width: 1.2em; font-weight: 700; }
+.suite .pass .mark { color: var(--ok); }
+.suite .fail .mark { color: var(--bad); }
+.suite .skip .mark, .suite .skip { color: var(--muted); }
+.suite .err { display: block; margin-top: 2px; color: var(--bad); font-size: 0.82rem; }
