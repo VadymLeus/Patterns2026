@@ -10,7 +10,7 @@
   <header class="top">
     <div>
       <h1>Конструктор ПК</h1>
-      <p class="muted">Лабораторна робота №4–6 · породжуючі патерни на JavaScript</p>
+      <p class="muted">Лабораторна робота №4–6 · породжуючі патерни на JavaScript · <a href="tests.html">запустити тести</a></p>
     </div>
     <ul class="legend" aria-label="Патерни проекту">
       <li class="badge p-singleton">Одинак</li>
@@ -144,7 +144,15 @@
     </div>
 
     <section class="card wide">
-      <h2>Зібрані ПК</h2>
+      <h2>
+        Зібрані ПК <span class="hint">зберігаються в браузері</span>
+        <span class="h2-actions">
+          <button id="exportBtn" class="btn ghost small" type="button">Експорт JSON</button>
+          <button id="importBtn" class="btn ghost small" type="button">Імпорт JSON</button>
+          <input id="importFile" type="file" accept=".json,application/json" hidden>
+        </span>
+      </h2>
+      <p id="savedMsg" class="msg" role="status"></p>
       <p id="savedEmpty" class="muted">Поки порожньо. Налаштуйте збірку й натисніть «Зібрати ПК».</p>
       <div id="saved" class="saved"></div>
     </section>
@@ -183,7 +191,12 @@
   <script src="library/builder/PCBuilder.js"></script>
   <script src="library/builder/PCDirector.js"></script>
 
+  <!-- Збереження збірок (не патерн: збірка відновлюється через фабрики та будівельник) -->
+  <script src="library/persistence/PCSerializer.js"></script>
+  <script src="library/persistence/BuildStorage.js"></script>
+
   <!-- Візуалізація (не патерн, лише відображення) -->
+  <script src="ui/patternBadges.js"></script>
   <script src="ui/PcView.js"></script>
 
   <script src="script.js"></script>

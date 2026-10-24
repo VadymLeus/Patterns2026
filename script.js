@@ -7,14 +7,7 @@
 //   Прототип          — PC.clone(), PresetRegistry
 
 // ---------- Стан застосунку ----------
-const logger = Logger.getInstance();
-const PATTERN_CLASS = {
-  'Одинак': 'p-singleton',
-  'Фабричний метод': 'p-factory',
-  'Абстрактна фабрика': 'p-abstract',
-  'Будівельник': 'p-builder',
-  'Прототип': 'p-prototype',
-};
+const logger = Logger.getInstance(); // PATTERN_CLASS береться з ui/patternBadges.js
 
 const $ = (id) => document.getElementById(id);
 const fmt = (n) => n.toLocaleString('uk-UA') + ' грн';
@@ -41,6 +34,8 @@ const builder = new PCBuilder(); // Будівельник, з яким прац
 const presets = new PresetRegistry(); // Прототипи готових збірок
 const pcView = new PcView($('pcView')); // схема збірки (лише відображення)
 const saved = []; // зібрані користувачем ПК
+const storage = new BuildStorage(); // localStorage
+const persist = () => storage.save(saved.map((pc) => PCSerializer.toData(pc)));
 const selects = {}; // slot -> <select>
 let factory = null; // поточна фабрика платформи
 
@@ -149,6 +144,7 @@ function onBuild() {
   try {
     const pc = builder.build();
     saved.unshift(pc);
+    persist();
     $('buildName').value = `Збірка №${saved.length + 1}`;
     syncBuilderFromForm();
     setMsg(`Додано до списку: «${pc.name}»`, 'ok');
@@ -265,10 +261,54 @@ $('saved').addEventListener('click', (e) => {
   const pc = saved.find((x) => x.id === Number(btn.closest('.build').dataset.id));
   if (!pc) return;
 
-  if (btn.dataset.act === 'load') loadPc(pc.clone()); // Прототип
-  else if (btn.dataset.act === 'clone') saved.unshift(pc.clone()); // Прототип
-  else saved.splice(saved.indexOf(pc), 1);
+  if (btn.dataset.act === 'load') {
+    loadPc(pc.clone()); // Прототип
+  } else {
+    if (btn.dataset.act === 'clone') saved.unshift(pc.clone()); // Прототип
+    else saved.splice(saved.indexOf(pc), 1);
+    persist();
+  }
   render();
+});
+
+// ---------- Експорт / імпорт JSON ----------
+function setSavedMsg(text = '', kind = '') {
+  const el = $('savedMsg');
+  el.textContent = text;
+  el.className = 'msg ' + kind;
+}
+
+$('exportBtn').addEventListener('click', () => {
+  if (saved.length === 0) return setSavedMsg('Немає що експортувати: спершу зберіть хоча б один ПК', 'bad');
+  const json = JSON.stringify(PCSerializer.toExport(saved), null, 2);
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(new Blob([json], { type: 'application/json' }));
+  link.download = 'patterns2026-builds.json';
+  document.body.append(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+  setSavedMsg(`Експортовано збірок: ${saved.length}`, 'ok');
+});
+
+$('importBtn').addEventListener('click', () => $('importFile').click());
+
+$('importFile').addEventListener('change', async (e) => {
+  const file = e.target.files[0];
+  e.target.value = ''; // щоб той самий файл можна було вибрати ще раз
+  if (!file) return;
+  try {
+    const list = PCSerializer.parseExport(JSON.parse(await file.text()));
+    const { pcs, errors } = PCSerializer.restoreAll(list);
+    saved.unshift(...pcs);
+    persist();
+    render();
+    logger.log('Будівельник', `Імпорт: ${pcs.length} збірок створено заново через фабрики та PCBuilder, пропущено ${errors.length}`);
+    const skipped = errors.length ? `, пропущено ${errors.length} (${errors[0]})` : '';
+    setSavedMsg(`Імпортовано збірок: ${pcs.length}${skipped}`, errors.length && !pcs.length ? 'bad' : 'ok');
+  } catch (err) {
+    setSavedMsg(err instanceof SyntaxError ? 'Файл не є коректним JSON' : err.message, 'bad');
+  }
 });
 
 // ---------- Старт ----------
@@ -287,5 +327,12 @@ logger.silently(() => {
 });
 logger.log('Будівельник', 'PCDirector зібрав 3 готові збірки через PCBuilder (рецепти офісного, ігрового ПК та робочої станції)');
 logger.log('Прототип', 'PresetRegistry зберігає ці збірки як прототипи: користувач завжди отримує їхні клони');
+
+// Збережені раніше збірки: створюються заново через фабрики й будівельник
+const restored = PCSerializer.restoreAll(storage.load());
+saved.push(...restored.pcs);
+if (restored.pcs.length || restored.errors.length) {
+  logger.log('Будівельник', `З localStorage відновлено збірок: ${restored.pcs.length}, пропущено пошкоджених: ${restored.errors.length}`);
+}
 
 loadPc(presets.get('gaming'));

@@ -83,6 +83,7 @@ h3 { font-size: 1rem; }
 .p-abstract  { --h: 170; }
 .p-builder   { --h: 28; }
 .p-prototype { --h: 330; }
+.p-storage   { --h: 100; }
 .p-error     { --h: 0; }
 
 /* ---------- Розкладка ---------- */
@@ -165,6 +166,9 @@ input:focus-visible, select:focus-visible, button:focus-visible {
 .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-text); width: 100%; padding: 11px; margin-top: 6px; }
 .btn.ghost { background: transparent; }
 .btn.small { padding: 3px 10px; font-size: 0.8rem; margin-left: auto; }
+.h2-actions { margin-left: auto; display: flex; gap: 6px; }
+.h2-actions .btn.small { margin-left: 0; }
+a { color: var(--accent); }
 
 /* ---------- Готові збірки ---------- */
 .presets { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 10px; }
