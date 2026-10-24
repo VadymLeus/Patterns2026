@@ -5,6 +5,15 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Конструктор ПК</title>
   <link rel="stylesheet" href="style.css">
+  <script>
+    // Тема застосовується до відображення сторінки, щоб не було миготіння
+    (function () {
+      try {
+        var data = JSON.parse(localStorage.getItem('patterns2026.settings.v1'));
+        if (data && (data.theme === 'light' || data.theme === 'dark')) document.documentElement.dataset.theme = data.theme;
+      } catch (e) {}
+    })();
+  </script>
 </head>
 <body>
   <header class="top">
@@ -12,13 +21,31 @@
       <h1>Конструктор ПК</h1>
       <p class="muted">Лабораторна робота №4–6 · породжуючі патерни на JavaScript · <a href="tests.html">запустити тести</a></p>
     </div>
-    <ul class="legend" aria-label="Патерни проекту">
-      <li class="badge p-singleton">Одинак</li>
-      <li class="badge p-factory">Фабричний метод</li>
-      <li class="badge p-abstract">Абстрактна фабрика</li>
-      <li class="badge p-builder">Будівельник</li>
-      <li class="badge p-prototype">Прототип</li>
-    </ul>
+    <div class="top-right">
+      <ul class="legend" aria-label="Патерни проекту">
+        <li class="badge p-singleton">Одинак</li>
+        <li class="badge p-factory">Фабричний метод</li>
+        <li class="badge p-abstract">Абстрактна фабрика</li>
+        <li class="badge p-builder">Будівельник</li>
+        <li class="badge p-prototype">Прототип</li>
+      </ul>
+      <div class="tools">
+        <label>Валюта <span class="hint">умовний курс</span>
+          <select id="currencySelect">
+            <option value="UAH">₴ Гривня</option>
+            <option value="USD">$ Долар</option>
+            <option value="EUR">€ Євро</option>
+          </select>
+        </label>
+        <label>Тема
+          <select id="themeSelect">
+            <option value="auto">Авто</option>
+            <option value="light">Світла</option>
+            <option value="dark">Темна</option>
+          </select>
+        </label>
+      </div>
+    </div>
   </header>
 
   <main class="layout">
@@ -39,6 +66,14 @@
         <legend>Платформа <span class="hint">абстрактна фабрика</span></legend>
         <label class="seg"><input type="radio" name="platform" value="intel"><span>Intel</span></label>
         <label class="seg"><input type="radio" name="platform" value="amd" checked><span>AMD</span></label>
+      </fieldset>
+
+      <fieldset class="field platform tier">
+        <legend>Комплект <span class="hint">друга абстрактна фабрика: відеокарта, накопичувач, БЖ, корпус і кулер одного рівня</span></legend>
+        <label class="seg"><input type="radio" name="tier" value="" checked><span>Свій вибір</span></label>
+        <label class="seg"><input type="radio" name="tier" value="budget"><span>Бюджет</span></label>
+        <label class="seg"><input type="radio" name="tier" value="optimum"><span>Оптимум</span></label>
+        <label class="seg"><input type="radio" name="tier" value="premium"><span>Преміум</span></label>
       </fieldset>
 
       <div id="slots" class="slots"></div>
@@ -62,8 +97,8 @@
             <text class="v-cap" x="270" y="104">Корпус</text>
             <text id="v-case-1" class="v-val" x="270" y="120"></text>
             <text id="v-case-2" class="v-sub" x="270" y="134"></text>
-            <g data-fan transform="translate(326 210) scale(1.25)"></g>
-            <g data-fan transform="translate(326 300) scale(1.25)"></g>
+            <g data-fan transform="translate(326 255) scale(1.25)"></g>
+            <g data-fan transform="translate(326 340) scale(1.25)"></g>
           </g>
 
           <!-- Материнська плата: висота залежить від формату (ATX / mATX) -->
@@ -71,7 +106,17 @@
             <title></title>
             <rect id="v-board-rect" class="body" x="18" y="18" width="236" height="296" rx="10"/>
             <text id="v-board-text" class="v-sub" x="30" y="36"></text>
-            <text id="v-board-socket" class="v-sub" x="34" y="128"></text>
+            <text id="v-board-socket" class="v-sub" x="34" y="140"></text>
+          </g>
+
+          <!-- Охолодження: вентилятор під процесором, підпис у правій колонці -->
+          <g id="v-cooler" class="v-part">
+            <title></title>
+            <circle class="body" cx="66" cy="82" r="40"/>
+            <g data-fan transform="translate(66 82) scale(1.3)"></g>
+            <text class="v-cap" x="270" y="158">Охолодження</text>
+            <text id="v-cooler-1" class="v-val" x="270" y="174"></text>
+            <text id="v-cooler-2" class="v-sub" x="270" y="188"></text>
           </g>
 
           <!-- Процесор -->
@@ -170,6 +215,7 @@
   <!-- Одинак -->
   <script src="library/singleton/Logger.js"></script>
   <script src="library/singleton/PriceList.js"></script>
+  <script src="library/singleton/Settings.js"></script>
 
   <!-- Фабричний метод -->
   <script src="library/factoryMethod/ComponentCreator.js"></script>
@@ -181,6 +227,8 @@
   <script src="library/abstractFactory/IntelFactory.js"></script>
   <script src="library/abstractFactory/AmdFactory.js"></script>
   <script src="library/abstractFactory/platforms.js"></script>
+  <script src="library/abstractFactory/TierFactory.js"></script>
+  <script src="library/abstractFactory/tiers.js"></script>
 
   <!-- Прототип -->
   <script src="library/prototype/PC.js"></script>
@@ -193,6 +241,7 @@
 
   <!-- Збереження збірок (не патерн: збірка відновлюється через фабрики та будівельник) -->
   <script src="library/persistence/PCSerializer.js"></script>
+  <script src="library/persistence/KeyValueStorage.js"></script>
   <script src="library/persistence/BuildStorage.js"></script>
 
   <!-- Візуалізація (не патерн, лише відображення) -->

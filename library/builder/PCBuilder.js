@@ -30,6 +30,7 @@ class PCBuilder {
 
   setCpu(cpu) { return this.setPart('cpu', cpu); }
   setMotherboard(board) { return this.setPart('motherboard', board); }
+  setCooler(cooler) { return this.setPart('cooler', cooler); }
   setRam(ram) { return this.setPart('ram', ram); }
   setGpu(gpu) { return this.setPart('gpu', gpu); }
   setStorage(storage) { return this.setPart('storage', storage); }

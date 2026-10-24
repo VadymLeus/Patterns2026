@@ -16,8 +16,10 @@
   color-scheme: light dark;
 }
 
+/* Темна тема: автоматично за налаштуванням системи або примусово (data-theme="dark").
+   Примусова світла (data-theme="light") просто не вмикає темні змінні. */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
     --bg: #12151c;
     --card: #1a1f2a;
     --field: #141822;
@@ -32,6 +34,27 @@
     --badge-l: 72%;
   }
 }
+
+:root[data-theme="dark"] {
+  --bg: #12151c;
+  --card: #1a1f2a;
+  --field: #141822;
+  --text: #e8ebf2;
+  --muted: #9aa3b5;
+  --line: #2a3140;
+  --accent: #7b93ff;
+  --accent-text: #10131a;
+  --ok: #4cc38a;
+  --bad: #ff7b7b;
+  --warn: #e5b454;
+  --badge-l: 72%;
+  color-scheme: dark;
+}
+
+:root[data-theme="light"] { color-scheme: light; }
+
+/* Короткочасно вимикає переходи під час зміни теми */
+.theme-switching *, .theme-switching *::before, .theme-switching *::after { transition: none !important; }
 
 * { box-sizing: border-box; }
 
@@ -64,7 +87,12 @@ h3 { font-size: 1rem; }
 }
 .top p { margin: 4px 0 0; }
 
-.legend { display: flex; flex-wrap: wrap; gap: 6px; list-style: none; margin: 0; padding: 0; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px; list-style: none; margin: 0; padding: 0; justify-content: flex-end; }
+
+.top-right { display: grid; gap: 10px; justify-items: end; }
+.tools { display: flex; flex-wrap: wrap; gap: 8px 16px; justify-content: flex-end; }
+.tools label { display: flex; align-items: center; gap: 6px; font-size: 0.82rem; color: var(--muted); }
+.tools select { width: auto; padding: 4px 8px; font-size: 0.85rem; color: var(--text); }
 
 /* ---------- Бейджі патернів ---------- */
 .badge {

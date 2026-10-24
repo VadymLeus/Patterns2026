@@ -20,6 +20,13 @@ const CATALOG = [
   { id: 'b650', type: 'motherboard', platform: 'amd', name: 'AMD B650 · ATX · DDR5', formFactor: 'ATX', ramType: 'DDR5', price: 6200 },
   { id: 'x670e', type: 'motherboard', platform: 'amd', name: 'AMD X670E · ATX · DDR5', formFactor: 'ATX', ramType: 'DDR5', price: 12500 },
 
+  // ---------- Охолодження процесора (фабричний метод) ----------
+  { id: 'cooler-stock', type: 'cooler', name: 'Штатний кулер · до 65 Вт', maxTdp: 65, price: 250 },
+  { id: 'cooler-tower', type: 'cooler', name: 'Башта 120 мм · до 120 Вт', maxTdp: 120, price: 900 },
+  { id: 'cooler-dual', type: 'cooler', name: 'Башта 2×120 мм · до 180 Вт', maxTdp: 180, price: 1700 },
+  { id: 'cooler-aio240', type: 'cooler', name: 'Рідинне 240 мм · до 250 Вт', maxTdp: 250, price: 3600 },
+  { id: 'cooler-aio360', type: 'cooler', name: 'Рідинне 360 мм · до 300 Вт', maxTdp: 300, price: 5200 },
+
   // ---------- Оперативна пам'ять (фабричний метод) ----------
   { id: 'ddr4-16', type: 'ram', name: '16 ГБ DDR4-3200', ramType: 'DDR4', sizeGb: 16, price: 1500 },
   { id: 'ddr4-32', type: 'ram', name: '32 ГБ DDR4-3200', ramType: 'DDR4', sizeGb: 32, price: 2900 },

@@ -16,7 +16,7 @@ class Compatibility {
   static check(parts) {
     const missing = PC_SLOTS.filter(({ key }) => !parts[key]).map(({ label }) => label);
     const conflicts = [];
-    const { cpu, motherboard, ram, gpu, psu } = parts;
+    const { cpu, motherboard, cooler, ram, gpu, psu } = parts;
     const pcCase = parts.case;
 
     if (cpu && motherboard && cpu.socket !== motherboard.socket) {
@@ -35,6 +35,12 @@ class Compatibility {
       conflicts.push({
         slots: ['motherboard', 'case'],
         message: `Корпус не підтримує плати формату ${motherboard.formFactor}`,
+      });
+    }
+    if (cpu && cooler && cooler.maxTdp < cpu.tdp) {
+      conflicts.push({
+        slots: ['cooler', 'cpu'],
+        message: `Кулер розрахований на ${cooler.maxTdp} Вт, а процесор виділяє до ${cpu.tdp} Вт тепла`,
       });
     }
     if (cpu && gpu && psu) {

@@ -2,37 +2,14 @@
 // Усі звернення захищені try/catch: у приватному режимі або при заблокованому сховищі
 // застосунок просто працює без збереження, а не падає.
 
-class BuildStorage {
+class BuildStorage extends KeyValueStorage {
   constructor(key = 'patterns2026.builds.v1') {
-    this.key = key;
+    super(key);
   }
 
-  // Повертає масив записів або [], якщо нічого немає чи дані пошкоджені
+  // Повертає масив записів або [], якщо нічого немає, дані пошкоджені чи це не масив
   load() {
-    try {
-      const raw = localStorage.getItem(this.key);
-      const data = raw ? JSON.parse(raw) : [];
-      return Array.isArray(data) ? data : [];
-    } catch {
-      return [];
-    }
-  }
-
-  // Повертає true, якщо вдалося зберегти
-  save(list) {
-    try {
-      localStorage.setItem(this.key, JSON.stringify(list));
-      return true;
-    } catch {
-      return false;
-    }
-  }
-
-  clear() {
-    try {
-      localStorage.removeItem(this.key);
-    } catch {
-      /* сховище недоступне — нічого очищати */
-    }
+    const data = super.load([]);
+    return Array.isArray(data) ? data : [];
   }
 }

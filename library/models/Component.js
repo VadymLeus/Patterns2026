@@ -48,6 +48,13 @@ class Ram extends Component {
   }
 }
 
+class Cooler extends Component {
+  constructor(data) {
+    super(data);
+    this.maxTdp = data.maxTdp; // скільки тепла процесора здатний відвести, Вт
+  }
+}
+
 class Gpu extends Component {
   constructor(data) {
     super(data);
@@ -88,6 +95,7 @@ class PcCase extends Component {
 const PC_SLOTS = [
   { key: 'cpu', label: 'Процесор' },
   { key: 'motherboard', label: 'Материнська плата' },
+  { key: 'cooler', label: 'Охолодження' },
   { key: 'ram', label: "Оперативна пам'ять" },
   { key: 'gpu', label: 'Відеокарта' },
   { key: 'storage', label: 'Накопичувач' },

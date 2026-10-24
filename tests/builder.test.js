@@ -3,6 +3,7 @@ describe('Будівельник', 'PCBuilder, PCDirector та правила с
   const GOOD = {
     cpu: 'r5-7600',
     motherboard: 'b650',
+    cooler: 'cooler-tower',
     ram: 'ddr5-32',
     gpu: 'rtx4060',
     storage: 'nvme-1tb',
@@ -50,7 +51,7 @@ describe('Будівельник', 'PCBuilder, PCDirector та правила с
       error = e;
     }
     expect(error).toBeInstanceOf(BuildError);
-    expect(error.issues.length).toBe(7);
+    expect(error.issues.length).toBe(PC_SLOTS.length);
   });
 
   it('процесор іншого сокета не підходить до плати', () => {
@@ -109,7 +110,7 @@ describe('Будівельник', 'PCBuilder, PCDirector та правила с
     const parts = partsFor();
     PC_SLOTS.forEach(({ key }) => builder.setPart(key, parts[key]));
     builder.build();
-    expect(builder.validate().missing.length).toBe(7);
+    expect(builder.validate().missing.length).toBe(PC_SLOTS.length);
   });
 
   it('порожня назва замінюється назвою за замовчуванням', () => {

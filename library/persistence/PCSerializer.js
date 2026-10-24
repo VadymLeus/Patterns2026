@@ -10,7 +10,7 @@
 //   Будівельник        — збирає та перевіряє результат
 
 class PCSerializer {
-  static FORMAT_VERSION = 1;
+  static FORMAT_VERSION = 2; // 2: з'явився слот «cooler»; записи версії 1 відновлюються з підібраним кулером
   static MAX_BUILDS = 200; // захист від надто великого файлу
   static MAX_NAME_LENGTH = 60;
 
@@ -37,13 +37,26 @@ class PCSerializer {
     if (!data || typeof data !== 'object' || !data.parts || typeof data.parts !== 'object') {
       throw new Error('Некоректний запис збірки');
     }
+    const ids = { ...data.parts };
+    // Міграція: у записах старого формату кулера не було — підбираємо найдешевший, що впорається
+    if (ids.cooler === undefined && typeof ids.cpu === 'string') {
+      ids.cooler = PCSerializer.defaultCoolerId(ids.cpu);
+    }
     builder.reset().setName(String(data.name ?? '').slice(0, PCSerializer.MAX_NAME_LENGTH));
     PC_SLOTS.forEach(({ key, label }) => {
-      const id = data.parts[key];
+      const id = ids[key];
       if (typeof id !== 'string') throw new Error(`Немає деталі: ${label}`);
       builder.setPart(key, PCSerializer.createPart(key, id));
     });
     return builder.build();
+  }
+
+  // Найдешевший кулер із каталогу, якому вистачає потужності для цього процесора
+  static defaultCoolerId(cpuId) {
+    const cpu = Catalog.find(cpuId);
+    const cooler = Catalog.byType('cooler').find((c) => c.maxTdp >= cpu.tdp);
+    if (!cooler) throw new Error(`Немає кулера для процесора ${cpu.name}`);
+    return cooler.id;
   }
 
   // Відновлює список записів. Пошкоджені пропускає й повідомляє про них окремо.

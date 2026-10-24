@@ -36,7 +36,7 @@ class PcView {
   // parts — поточні деталі { slot: Component }, conflicts — з Compatibility.check()
   update(parts, conflicts) {
     const bad = new Set(conflicts.flatMap((c) => c.slots));
-    const { cpu, motherboard, ram, gpu, storage, psu } = parts;
+    const { cpu, motherboard, cooler, ram, gpu, storage, psu } = parts;
     const pcCase = parts.case;
 
     // Форма плати визначає її розмір, а відеокарта сидить у нижній частині плати
@@ -48,9 +48,13 @@ class PcView {
 
     // Підписи
     this.text('v-cpu-1', cpu ? cpu.socket : 'CPU');
-    this.text('v-cpu-2', cpu ? cpu.name.replace(/^(Intel Core |AMD )/, '') : '');
+    const cpuName = cpu ? cpu.name.replace(/^(Intel Core |AMD )/, '') : '';
+    this.text('v-cpu-2', cpuName);
+    this.$('v-cpu-2').style.fontSize = cpuName.length > 12 ? '7.6px' : ''; // довга назва має вміститися в чип
     this.text('v-board-text', motherboard ? motherboard.name : 'Материнська плата');
     this.text('v-board-socket', motherboard ? `сокет ${motherboard.socket}` : '');
+    this.text('v-cooler-1', cooler ? cooler.name.split(' · ')[0] : '—');
+    this.text('v-cooler-2', cooler ? `до ${cooler.maxTdp} Вт` : '');
     this.text('v-ram-1', ram ? `${ram.ramType} · ${ram.sizeGb} ГБ` : 'RAM');
     this.text('v-gpu-1', gpu ? gpu.name.replace(/^(GeForce |Radeon )/, '') : 'GPU');
     this.text('v-gpu-2', gpu ? `${gpu.tdp} Вт` : '');

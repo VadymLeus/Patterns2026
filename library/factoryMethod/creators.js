@@ -16,6 +16,11 @@ class StorageCreator extends ComponentCreator {
   createComponent(data) { return new Storage(data); }
 }
 
+class CoolerCreator extends ComponentCreator {
+  get type() { return 'cooler'; }
+  createComponent(data) { return new Cooler(data); }
+}
+
 class PsuCreator extends ComponentCreator {
   get type() { return 'psu'; }
   createComponent(data) { return new Psu(data); }
@@ -32,6 +37,7 @@ const CREATORS = {
   ram: new RamCreator(),
   storage: new StorageCreator(),
   psu: new PsuCreator(),
+  cooler: new CoolerCreator(),
   case: new CaseCreator(),
 };
 

@@ -1,8 +1,9 @@
 // Точка входу. Тут інтерфейс "склеює" усі п'ять патернів:
 //
-//   Одинак            — Logger, PriceList
-//   Фабричний метод   — getCreator(...).create(...)        (відеокарта, пам'ять, накопичувач, БЖ, корпус)
+//   Одинак            — Logger, PriceList, Settings
+//   Фабричний метод   — getCreator(...).create(...)        (відеокарта, пам'ять, накопичувач, БЖ, корпус, кулер)
 //   Абстрактна фабрика— getPlatformFactory(...)             (процесор + плата одного сімейства)
+//                       getTierFactory(...)                 (комплект деталей одного рівня)
 //   Будівельник       — PCBuilder (+ PCDirector для готових збірок)
 //   Прототип          — PC.clone(), PresetRegistry
 
@@ -10,7 +11,7 @@
 const logger = Logger.getInstance(); // PATTERN_CLASS береться з ui/patternBadges.js
 
 const $ = (id) => document.getElementById(id);
-const fmt = (n) => n.toLocaleString('uk-UA') + ' грн';
+const fmt = (n) => settings.format(n); // ціни зберігаються в гривнях, а показуються у вибраній валюті
 const esc = (s) =>
   String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
@@ -29,7 +30,9 @@ function appendLog(entry) {
 logger.entries.forEach(appendLog);
 logger.subscribe(appendLog);
 
-const prices = PriceList.getInstance(); // Одинак
+const prices = PriceList.getInstance(); // Одинак: ціни
+const settings = Settings.getInstance(); // Одинак: валюта й тема
+const settingsStorage = new KeyValueStorage('patterns2026.settings.v1');
 const builder = new PCBuilder(); // Будівельник, з яким працює конфігуратор
 const presets = new PresetRegistry(); // Прототипи готових збірок
 const pcView = new PcView($('pcView')); // схема збірки (лише відображення)
@@ -78,13 +81,13 @@ function buildSlotControls() {
   PC_SLOTS.forEach(({ key, label }) => {
     const wrap = document.createElement('label');
     wrap.className = 'field';
-    wrap.innerHTML = `<span>${esc(label)}</span><select></select>`;
+    wrap.innerHTML = `<span>${esc(label)}</span><select id="sel-${key}"></select>`;
     $('slots').append(wrap);
     selects[key] = wrap.querySelector('select');
     selects[key].addEventListener('change', () => onPartChosen(key));
   });
   // Списки процесорів і плат заповнює applyPlatform(); решта не залежить від платформи
-  ['ram', 'gpu', 'storage', 'psu', 'case'].forEach((slot) => fillSelect(slot, Catalog.byType(slot)));
+  ['cooler', 'ram', 'gpu', 'storage', 'psu', 'case'].forEach((slot) => fillSelect(slot, Catalog.byType(slot)));
 }
 
 // Підставляє фабрику платформи та заповнює списки процесорів і плат лише з її сімейства
@@ -113,6 +116,25 @@ function onPlatformChosen(platformKey) {
 
 function onPartChosen(slot) {
   builder.setPart(slot, createPart(slot, selects[slot].value));
+  if (TIER_SLOTS.includes(slot)) resetTier(); // деталь змінили вручну — це вже не готовий комплект
+  setMsg();
+  render();
+}
+
+// Друга абстрактна фабрика: комплект одного рівня замінює п'ять деталей одразу
+const TIER_SLOTS = ['gpu', 'storage', 'psu', 'case', 'cooler'];
+
+function resetTier() {
+  document.querySelector('input[name="tier"][value=""]').checked = true;
+}
+
+function onTierChosen(tierKey) {
+  if (!tierKey) return; // «Свій вибір» нічого не змінює
+  const kit = getTierFactory(tierKey).createKit();
+  Object.entries(kit).forEach(([slot, part]) => {
+    selects[slot].value = part.id;
+    builder.setPart(slot, part);
+  });
   setMsg();
   render();
 }
@@ -127,6 +149,7 @@ function loadPc(pc) {
   $('buildName').value = pc.name;
   builder.reset().setName(pc.name);
   PC_SLOTS.forEach(({ key }) => builder.setPart(key, pc.parts[key]));
+  resetTier();
   setMsg();
   render();
 }
@@ -241,6 +264,24 @@ document.querySelectorAll('input[name="platform"]').forEach((radio) =>
   radio.addEventListener('change', () => onPlatformChosen(radio.value))
 );
 
+document.querySelectorAll('input[name="tier"]').forEach((radio) =>
+  radio.addEventListener('change', () => onTierChosen(radio.value))
+);
+
+// Налаштування (Одинак Settings): тема застосовується тут, валюта — через fmt()
+function applyTheme() {
+  const root = document.documentElement;
+  // Під час перемикання вимикаємо CSS-переходи, щоб схема не «блимала» старими кольорами
+  root.classList.add('theme-switching');
+  if (settings.theme === 'auto') delete root.dataset.theme;
+  else root.dataset.theme = settings.theme;
+  void root.offsetWidth; // застосувати нові кольори до зняття класу
+  requestAnimationFrame(() => root.classList.remove('theme-switching'));
+}
+
+$('currencySelect').addEventListener('change', (e) => settings.setCurrency(e.target.value));
+$('themeSelect').addEventListener('change', (e) => settings.setTheme(e.target.value));
+
 $('discount').addEventListener('change', (e) => {
   e.target.value = prices.setDiscount(e.target.value);
   refreshLabels();
@@ -312,6 +353,10 @@ $('importFile').addEventListener('change', async (e) => {
 });
 
 // ---------- Старт ----------
+settings.restore(settingsStorage.load()); // збережені валюта й тема
+applyTheme();
+$('currencySelect').value = settings.currency;
+$('themeSelect').value = settings.theme;
 buildSlotControls();
 
 // Одинак: другий new повертає той самий об'єкт
@@ -336,3 +381,11 @@ if (restored.pcs.length || restored.errors.length) {
 }
 
 loadPc(presets.get('gaming'));
+
+// Будь-яка зміна налаштувань: застосувати тему, зберегти, перемалювати ціни
+settings.subscribe(() => {
+  applyTheme();
+  settingsStorage.save(settings.toData());
+  refreshLabels();
+  render();
+});
