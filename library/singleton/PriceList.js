@@ -18,7 +18,7 @@ class PriceList {
 
     CATALOG.forEach((item) => this.#prices.set(item.id, item.price));
     PriceList.#instance = this;
-    Logger.getInstance().log('Одинак', 'Створено єдиний екземпляр PriceList (прайс-лист на весь застосунок)');
+    Logger.getInstance().log('Одинак', 'Створено єдиний екземпляр PriceList (прайс-лист на весь застосунок)', 'PriceList');
   }
 
   static getInstance() {
@@ -32,7 +32,7 @@ class PriceList {
   // Знижка 0–50 %, діє на весь каталог
   setDiscount(percent) {
     this.#discount = Math.min(50, Math.max(0, Math.round(Number(percent)) || 0));
-    Logger.getInstance().log('Одинак', `Знижка ${this.#discount}% застосована до всього каталогу через єдиний PriceList`);
+    Logger.getInstance().log('Одинак', `Знижка ${this.#discount}% застосована до всього каталогу через єдиний PriceList`, 'PriceList');
     return this.#discount;
   }
 

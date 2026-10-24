@@ -36,7 +36,7 @@ class PC {
       parts[slot] = part.clone();
     }
     const copy = new PC(`${this.name} (копія)`, parts);
-    Logger.getInstance().log('Прототип', `Клоновано "${this.name}" → "${copy.name}": комплектуючі скопійовано окремими об'єктами`);
+    Logger.getInstance().log('Прототип', `Клоновано "${this.name}" → "${copy.name}": комплектуючі скопійовано окремими об'єктами`, 'PC');
     return copy;
   }
 }

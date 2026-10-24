@@ -14,6 +14,13 @@
 // Керування: стрілки, Home/End, Enter, Esc, набір літер; пошук для довгих списків.
 
 class Dropdown {
+  // Порядок у довгих списках: як у каталозі, від дешевших, від дорожчих (за data-sort — ціною в гривнях)
+  static SORT_MODES = [
+    { key: '', label: 'Каталог', icon: '↕' },
+    { key: 'asc', label: 'Дешевші', icon: '↑' },
+    { key: 'desc', label: 'Дорожчі', icon: '↓' },
+  ];
+
   static #opened = null; // відкритий список: одночасно відкритий лише один
   static #counter = 0;
 
@@ -37,6 +44,7 @@ class Dropdown {
     this.active = null; // <li> з підсвіткою
     this.typed = '';
     this.typedTimer = null;
+    this.sortMode = ''; // '' | 'asc' | 'desc'
     this.#build();
     this.#bind();
     this.sync();
@@ -58,6 +66,7 @@ class Dropdown {
       <div class="dd-panel" hidden>
         <div class="dd-searchbox" hidden>${Dropdown.ICON_SEARCH}
           <input class="dd-search" type="text" placeholder="Пошук…" aria-label="Пошук у списку" autocomplete="off" spellcheck="false">
+          <button type="button" class="dd-sort" tabindex="-1" hidden></button>
         </div>
         <ul class="dd-list" id="${this.uid}-list" role="listbox" tabindex="-1"></ul>
         <p class="dd-empty" hidden>Нічого не знайдено</p>
@@ -74,6 +83,7 @@ class Dropdown {
     this.list = this.root.querySelector('.dd-list');
     this.searchBox = this.root.querySelector('.dd-searchbox');
     this.search = this.root.querySelector('.dd-search');
+    this.sortBtn = this.root.querySelector('.dd-sort');
     this.empty = this.root.querySelector('.dd-empty');
   }
 
@@ -85,6 +95,7 @@ class Dropdown {
       title: d.title ?? option.textContent,
       meta: d.meta ?? '',
       price: d.price ?? '',
+      sort: d.sort !== undefined && d.sort !== '' && Number.isFinite(Number(d.sort)) ? Number(d.sort) : null,
       warn: d.warn ?? '',
       disabled: option.disabled,
     };
@@ -100,7 +111,55 @@ class Dropdown {
         entries.push(this.#item(node));
       }
     }
-    return entries;
+    return this.#sorted(entries);
+  }
+
+  // Сортування за ціною діє окремо в кожній групі (заголовки лишаються на місці)
+  #sorted(entries) {
+    if (!this.sortMode || !this.#canSort(entries)) return entries;
+    const sign = this.sortMode === 'asc' ? 1 : -1;
+    const result = [];
+    let run = [];
+    const flush = () => {
+      run.sort((a, b) => sign * (a.sort - b.sort)); // сортування стабільне: рівні ціни лишаються в порядку каталогу
+      result.push(...run);
+      run = [];
+    };
+    for (const entry of entries) {
+      if (entry.heading !== undefined) {
+        flush();
+        result.push(entry);
+      } else {
+        run.push(entry);
+      }
+    }
+    flush();
+    return result;
+  }
+
+  // Сортувати можна, лише якщо в кожного варіанта є ціна для порівняння
+  #canSort(entries) {
+    const items = entries.filter((e) => e.heading === undefined);
+    return items.length > 1 && items.every((e) => e.sort !== null);
+  }
+
+  #updateSortButton(entries) {
+    const mode = Dropdown.SORT_MODES.find((m) => m.key === this.sortMode);
+    this.sortBtn.hidden = this.searchBox.hidden || !this.#canSort(entries);
+    this.sortBtn.textContent = `${mode.icon} ${mode.label}`;
+    this.sortBtn.setAttribute('aria-label', `Порядок: ${mode.label.toLowerCase()}. Натисніть, щоб змінити`);
+    this.sortBtn.title = 'Порядок у списку: каталог → дешевші → дорожчі';
+  }
+
+  #cycleSort() {
+    const index = Dropdown.SORT_MODES.findIndex((m) => m.key === this.sortMode);
+    this.sortMode = Dropdown.SORT_MODES[(index + 1) % Dropdown.SORT_MODES.length].key;
+    const query = this.search.value;
+    this.#render();
+    this.search.value = query;
+    this.#filter();
+    const selected = this.list.querySelector('.dd-opt[aria-selected="true"]:not([hidden])');
+    if (selected) this.#setActive(selected);
   }
 
   // Оновлює кнопку за поточним значенням <select> (викликати після зміни значення чи цін)
@@ -119,6 +178,7 @@ class Dropdown {
     const entries = this.#entries();
     const count = entries.filter((e) => !e.heading).length;
     this.searchBox.hidden = count < this.options.searchFrom;
+    this.#updateSortButton(entries);
     this.search.value = '';
     this.empty.hidden = true;
 
@@ -264,6 +324,30 @@ class Dropdown {
     this.button.addEventListener('click', () => (this.isOpen ? this.close(true) : this.open()));
 
     this.root.addEventListener('keydown', (e) => {
+      if (this.isOpen && e.target === this.sortBtn) {
+        // Фокус на кнопці порядку: Enter і пропуск змінюють порядок, а не вибирають варіант
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          this.#cycleSort();
+          this.sortBtn.focus({ preventScroll: true });
+        } else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+          e.preventDefault();
+          this.search.focus({ preventScroll: true });
+          this.#move(e.key === 'ArrowDown' ? 1 : -1);
+        } else if (e.key === 'Escape') {
+          e.preventDefault();
+          e.stopPropagation();
+          this.close(true);
+        } else if (e.key === 'Tab') {
+          if (e.shiftKey) {
+            e.preventDefault();
+            this.search.focus({ preventScroll: true });
+          } else {
+            this.close();
+          }
+        }
+        return;
+      }
       if (!this.isOpen) {
         if (e.target === this.button && ['ArrowDown', 'ArrowUp', 'Enter', ' '].includes(e.key)) {
           e.preventDefault();
@@ -279,13 +363,25 @@ class Dropdown {
         case 'Enter': e.preventDefault(); this.#choose(this.active); break;
         case ' ': if (this.searchBox.hidden) { e.preventDefault(); this.#choose(this.active); } break;
         case 'Escape': e.preventDefault(); e.stopPropagation(); this.close(true); break;
-        case 'Tab': this.close(); break;
+        case 'Tab':
+          // З поля пошуку Tab веде до кнопки порядку (якщо вона є), далі закриває список
+          if (!e.shiftKey && e.target === this.search && !this.sortBtn.hidden) {
+            e.preventDefault();
+            this.sortBtn.focus({ preventScroll: true });
+          } else {
+            this.close();
+          }
+          break;
         default:
           if (this.searchBox.hidden && e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) this.#typeAhead(e.key);
       }
     });
 
     this.search.addEventListener('input', () => this.#filter());
+
+    // Кнопку порядку не відбираємо в поля пошуку фокус мишкою; з клавіатури до неї можна дійти по Tab
+    this.sortBtn.addEventListener('mousedown', (e) => e.preventDefault());
+    this.sortBtn.addEventListener('click', () => this.#cycleSort());
 
     // Мишка: наведення підсвічує, клік вибирає. mousedown не віддаємо, щоб поле пошуку не втрачало фокус
     this.list.addEventListener('mousedown', (e) => e.preventDefault());

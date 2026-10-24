@@ -16,9 +16,15 @@ const esc = (s) =>
   String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
 // Журнал: підписуємося ДО створення решти об'єктів, щоб побачити їхні перші записи
+const patternMap = new PatternMap(); // карта патернів: лічильники записів за класами
+let logFilter = null; // id вузла карти, за яким відфільтровано журнал (null — показано все)
+
 function appendLog(entry) {
+  patternMap.record(entry);
   const row = document.createElement('div');
   row.className = 'log-row';
+  row.dataset.actor = entry.actor ?? '';
+  row.hidden = !PatternMap.matches(entry, logFilter);
   row.innerHTML =
     `<span class="time">${entry.time.toLocaleTimeString('uk-UA')}</span>` +
     `<span class="badge ${PATTERN_CLASS[entry.pattern] || ''}">${esc(entry.pattern)}</span>` +
@@ -30,12 +36,66 @@ function appendLog(entry) {
 logger.entries.forEach(appendLog);
 logger.subscribe(appendLog);
 
+// ---------- Карта патернів ----------
+const mapView = new PatternMapView($('patternMap'), patternMap, { onSelect: setLogFilter });
+
+patternMap.subscribe((nodeId) => {
+  if (nodeId) mapView.pulse(nodeId);
+  mapView.update();
+  renderMapInfo();
+});
+
+// Показує в журналі лише записи вибраного вузла
+function setLogFilter(nodeId) {
+  logFilter = nodeId;
+  let shown = 0;
+  [...$('log').children].forEach((row) => {
+    row.hidden = !PatternMap.matches({ actor: row.dataset.actor }, nodeId);
+    if (!row.hidden) shown++;
+  });
+  const node = PatternMap.node(nodeId);
+  $('logFilter').hidden = !node;
+  $('logFilter').textContent = node ? `Фільтр: ${node.label} ✕` : '';
+  $('logFilter').setAttribute('aria-label', node ? `Знято фільтр журналу: ${node.label}. Натисніть, щоб показати всі записи` : '');
+  $('logEmpty').hidden = !node || shown > 0;
+  renderMapInfo();
+  // Журнал нижче за карту: якщо його не видно, підводимо до нього
+  if (node && $('logCard').getBoundingClientRect().top > window.innerHeight - 80) {
+    $('logCard').scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  }
+}
+
+function renderMapInfo() {
+  const node = PatternMap.node(mapView.selected);
+  if (!node) {
+    $('mapInfo').innerHTML =
+      `<h3>Як читати карту</h3>` +
+      `<p class="muted small">Стрілка «A → B» означає, що A створює або викликає B. Колір вузла збігається з бейджем патерну в журналі, а число на вузлі показує, скільки записів зробив цей клас.</p>` +
+      `<p class="muted small">Натисніть на вузол — журнал покаже лише його записи. Спробуйте змінити процесор, натиснути «Зібрати ПК» або запустити автозбірку й подивіться, які вузли спалахнуть.</p>`;
+    return;
+  }
+  const last = patternMap.last(node.id);
+  $('mapInfo').innerHTML =
+    `<h3>${esc(node.label)}</h3>` +
+    `<p><span class="badge ${PATTERN_CLASS[node.pattern] || ''}">${esc(node.pattern)}</span></p>` +
+    `<p class="small">${esc(node.hint)}</p>` +
+    `<p class="muted small">Записів у журналі: <b>${patternMap.count(node.id)}</b>` +
+    (last && last !== node.label ? `, останній — ${esc(last)}` : '') +
+    `</p>`;
+}
+renderMapInfo();
+
+$('logFilter').addEventListener('click', () => {
+  mapView.select(null);
+  setLogFilter(null);
+});
+
 const prices = PriceList.getInstance(); // Одинак: ціни
 const settings = Settings.getInstance(); // Одинак: валюта й тема
 const settingsStorage = new KeyValueStorage('patterns2026.settings.v1');
 const builder = new PCBuilder(); // Будівельник, з яким працює конфігуратор
 const presets = new PresetRegistry(); // Прототипи готових збірок
-const pcView = new PcView($('pcView')); // схема збірки (лише відображення)
+const pcView = new PcView($('pcView'), { onPick: openSlotFromView }); // схема збірки (лише відображення)
 const saved = []; // зібрані користувачем ПК
 const storage = new BuildStorage(); // localStorage
 const persist = () => storage.save(saved.map((pc) => PCSerializer.toData(pc)));
@@ -61,6 +121,7 @@ function labelOption(opt) {
   const price = fmt(prices.getPrice(opt.value));
   opt.textContent = `${opt.dataset.label} — ${price}`; // запасний текст рідного <select>
   opt.dataset.price = price; // його показує Dropdown
+  opt.dataset.sort = prices.getPrice(opt.value); // за цим числом Dropdown сортує за ціною (порядок не залежить від валюти)
 }
 
 function refreshLabels() {
@@ -128,7 +189,7 @@ function setMsg(text = '', kind = '') {
 
 function onPlatformChosen(platformKey) {
   applyPlatform(platformKey);
-  logger.log('Абстрактна фабрика', `Обрано сімейство: ${factory.label}. Процесор і плата створюються лише з нього`);
+  logger.log('Абстрактна фабрика', `Обрано сімейство: ${factory.label}. Процесор і плата створюються лише з нього`, factory.constructor.name);
   builder.setCpu(createPart('cpu', selects.cpu.value));
   builder.setMotherboard(createPart('motherboard', selects.motherboard.value));
   setMsg();
@@ -194,7 +255,7 @@ function onBuild() {
     setMsg(`Додано до списку: «${pc.name}»`, 'ok');
   } catch (err) {
     if (!(err instanceof BuildError)) throw err;
-    logger.log('Будівельник', `build() відмовив: ${err.issues.join('; ')}`);
+    logger.log('Будівельник', `build() відмовив: ${err.issues.join('; ')}`, 'PCBuilder');
     setMsg('Збірку не створено: виправте проблеми сумісності', 'bad');
   }
   render();
@@ -292,6 +353,19 @@ function renderPerf() {
   });
 }
 
+// ---------- Друк / PDF ----------
+// Аркуш-специфікація заповнюється перед друком; на екрані він схований (див. style.css, @media print)
+function renderPrintSheet() {
+  const sheet = BuildSheet.from(builder.snapshot(), {
+    name: $('buildName').value,
+    format: fmt,
+    discount: prices.discount,
+  });
+  $('printSheet').innerHTML = PrintSheet.render(sheet);
+}
+window.addEventListener('beforeprint', renderPrintSheet); // спрацьовує й на Ctrl+P
+$('printBtn').addEventListener('click', () => window.print());
+
 // ---------- Порівняння збірок ----------
 function compareSources() {
   const list = [{ group: 'Конфігуратор', value: 'current', pc: { name: 'Поточна конфігурація', parts: builder.snapshot() } }];
@@ -383,6 +457,20 @@ function renderCompare() {
 
 ['cmpA', 'cmpB'].forEach((id) => $(id).addEventListener('change', renderCompare));
 
+// Клік по деталі на схемі відкриває список саме цього слота
+function openSlotFromView(slot) {
+  const dropdown = dropdowns[slot];
+  if (!dropdown || dropdown.button.disabled) return;
+  const rect = dropdown.button.getBoundingClientRect();
+  if (rect.top < 70 || rect.bottom > window.innerHeight - 70) dropdown.button.scrollIntoView({ block: 'center' });
+  dropdown.open();
+  // Коротко підсвічуємо поле, щоб було видно, куди «потрапив» клік
+  dropdown.root.classList.remove('locate');
+  void dropdown.root.offsetWidth;
+  dropdown.root.classList.add('locate');
+  dropdown.button.addEventListener('animationend', () => dropdown.root.classList.remove('locate'), { once: true });
+}
+
 function syncDropdowns() {
   PC_SLOTS.forEach(({ key }) => markIncompatible(key));
   Object.values(dropdowns).forEach((dropdown) => dropdown.sync());
@@ -438,7 +526,11 @@ $('discount').addEventListener('change', (e) => {
 });
 
 $('buildBtn').addEventListener('click', onBuild);
-$('clearLog').addEventListener('click', () => ($('log').innerHTML = ''));
+$('clearLog').addEventListener('click', () => {
+  $('log').innerHTML = '';
+  patternMap.reset(); // лічильники карти починаються спочатку
+  if (logFilter) $('logEmpty').hidden = false;
+});
 
 $('presets').addEventListener('click', (e) => {
   const btn = e.target.closest('button[data-key]');
@@ -545,7 +637,7 @@ $('importFile').addEventListener('change', async (e) => {
     saved.unshift(...pcs);
     persist();
     render();
-    logger.log('Будівельник', `Імпорт: ${pcs.length} збірок створено заново через фабрики та PCBuilder, пропущено ${errors.length}`);
+    logger.log('Будівельник', `Імпорт: ${pcs.length} збірок створено заново через фабрики та PCBuilder, пропущено ${errors.length}`, 'PCSerializer');
     const skipped = errors.length ? `, пропущено ${errors.length} (${errors[0]})` : '';
     setSavedMsg(`Імпортовано збірок: ${pcs.length}${skipped}`, errors.length && !pcs.length ? 'bad' : 'ok');
   } catch (err) {
@@ -564,7 +656,7 @@ dropdowns.cmpB = new Dropdown($('cmpB'), { labelledBy: 'lbl-cmpB', searchFrom: 8
 renderBudgetInput();
 
 // Одинак: другий new повертає той самий об'єкт
-logger.log('Одинак', `new PriceList() === PriceList.getInstance() → ${new PriceList() === prices}`);
+logger.log('Одинак', `new PriceList() === PriceList.getInstance() → ${new PriceList() === prices}`, 'PriceList');
 
 // Директор збирає готові збірки будівельником; реєструємо їх як прототипи
 logger.silently(() => {
@@ -574,14 +666,14 @@ logger.silently(() => {
     .register('gaming', director.buildGaming(), 'Сучасні ігри у Full HD')
     .register('workstation', director.buildWorkstation(), 'Монтаж, 3D, віртуальні машини');
 });
-logger.log('Будівельник', 'PCDirector зібрав 3 готові збірки через PCBuilder (рецепти офісного, ігрового ПК та робочої станції)');
-logger.log('Прототип', 'PresetRegistry зберігає ці збірки як прототипи: користувач завжди отримує їхні клони');
+logger.log('Будівельник', 'PCDirector зібрав 3 готові збірки через PCBuilder (рецепти офісного, ігрового ПК та робочої станції)', 'PCDirector');
+logger.log('Прототип', 'PresetRegistry зберігає ці збірки як прототипи: користувач завжди отримує їхні клони', 'PresetRegistry');
 
 // Збережені раніше збірки: створюються заново через фабрики й будівельник
 const restored = PCSerializer.restoreAll(storage.load());
 saved.push(...restored.pcs);
 if (restored.pcs.length || restored.errors.length) {
-  logger.log('Будівельник', `З localStorage відновлено збірок: ${restored.pcs.length}, пропущено пошкоджених: ${restored.errors.length}`);
+  logger.log('Будівельник', `З localStorage відновлено збірок: ${restored.pcs.length}, пропущено пошкоджених: ${restored.errors.length}`, 'BuildStorage');
 }
 
 loadPc(presets.get('gaming'));

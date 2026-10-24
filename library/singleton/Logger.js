@@ -20,9 +20,11 @@ class Logger {
     return Logger.#instance ?? new Logger();
   }
 
-  log(pattern, message) {
+  // actor — назва класу, який пише в журнал (наприклад, "PCDirector"); за ним «карта патернів»
+  // розуміє, чий це запис. Необов'язковий: без нього запис просто не належить жодному вузлу.
+  log(pattern, message, actor = null) {
     if (this.#silent > 0) return;
-    const entry = { time: new Date(), pattern, message };
+    const entry = { time: new Date(), pattern, message, actor };
     this.#entries.push(entry);
     this.#listeners.forEach((listener) => listener(entry));
   }

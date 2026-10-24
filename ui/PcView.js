@@ -4,6 +4,8 @@
 // Розмітка схеми лежить в index.html (<svg id="pcView">), стилі — у style.css.
 // PcView не створює елементи, а перемикає в них класи та тексти:
 //   .filled — деталь на місці,  .bad — деталь у конфлікті,  .empty — слот порожній
+// Якщо передано onPick, на кожну деталь можна натиснути (мишею або Enter/пропуском):
+// PcView лише повідомляє, який слот вибрано, а що з цим робити — вирішує застосунок.
 
 // Вентилятор: кільце, п'ять лопатей і втулка (малюється в усіх елементах [data-fan])
 const FAN_MARKUP =
@@ -19,10 +21,27 @@ class PcView {
   static BOARD_HEIGHT = { ATX: 296, mATX: 236 }; // mATX нижча за ATX
   static PSU_BAR_WIDTH = 212;
 
-  constructor(svg) {
+  constructor(svg, { onPick = null } = {}) {
     this.svg = svg;
     this.lastIds = {};
     svg.querySelectorAll('[data-fan]').forEach((g) => (g.innerHTML = FAN_MARKUP));
+    if (onPick) this.#makePickable(onPick);
+  }
+
+  #makePickable(onPick) {
+    PC_SLOTS.forEach(({ key }) => {
+      const g = this.$('v-' + key);
+      g.classList.add('pickable');
+      g.setAttribute('tabindex', '0');
+      g.setAttribute('role', 'button');
+      g.addEventListener('click', () => onPick(key));
+      g.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onPick(key);
+        }
+      });
+    });
   }
 
   $(id) {
@@ -85,6 +104,8 @@ class PcView {
     g.classList.toggle('filled', Boolean(part) && !bad.has(slot));
     g.classList.toggle('bad', Boolean(part) && bad.has(slot));
     g.querySelector('title').textContent = part ? part.name : '';
+    const label = PC_SLOTS.find((s) => s.key === slot).label;
+    g.setAttribute('aria-label', `${label}: ${part ? part.name : 'не вибрано'}. Натисніть, щоб змінити`);
 
     const id = part ? part.id : null;
     if (part && this.lastIds[slot] !== id) {

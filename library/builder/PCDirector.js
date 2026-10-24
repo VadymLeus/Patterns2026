@@ -83,17 +83,22 @@ class PCDirector {
         ])
       ),
     }));
-    logger.log(
-      'Абстрактна фабрика',
-      `${factories.map((f) => f.constructor.name).join(' і ')}: створено кандидатів — ${pool.cpu.length} процесорів і ${pool.motherboard.length} плат`
+    // По рядку на кожну фабрику, щоб у журналі було видно, хто саме створював
+    factories.forEach((f) =>
+      logger.log(
+        'Абстрактна фабрика',
+        `${f.constructor.name}: створено кандидатів — ${f.cpuOptions().length} процесорів і ${f.motherboardOptions().length} плат`,
+        f.constructor.name
+      )
     );
-    logger.log('Фабричний метод', 'Творці створили кандидатів решти деталей: кулери, пам’ять, відеокарти, накопичувачі, БЖ, корпуси');
+    logger.log('Фабричний метод', 'Творці створили кандидатів решти деталей: кулери, пам’ять, відеокарти, накопичувачі, БЖ, корпуси', 'ComponentCreator');
 
     const plan = BudgetPlanner.plan(pool, budget, purpose);
     const label = Performance.PURPOSES[purpose].label;
     logger.log(
       'Будівельник',
-      `PCDirector.buildForBudget: перебрано ${plan.combos} сумісних комбінацій, найкраща для «${label}» — ${plan.cost} грн, оцінка ${Math.round(plan.score)}/100`
+      `PCDirector.buildForBudget: перебрано ${plan.combos} сумісних комбінацій, найкраща для «${label}» — ${plan.cost} грн, оцінка ${Math.round(plan.score)}/100`,
+      'PCDirector'
     );
 
     return this.builder

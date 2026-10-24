@@ -65,7 +65,7 @@ class PCBuilder {
       throw new BuildError(issues);
     }
     const pc = new PC(this.#name, { ...this.#parts });
-    Logger.getInstance().log('Будівельник', `PCBuilder.build() зібрав "${pc.name}": перевірено сумісність, створено PC`);
+    Logger.getInstance().log('Будівельник', `PCBuilder.build() зібрав "${pc.name}": перевірено сумісність, створено PC`, 'PCBuilder');
     this.reset();
     return pc;
   }

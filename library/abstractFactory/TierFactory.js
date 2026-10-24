@@ -51,7 +51,8 @@ class TierFactory {
     };
     Logger.getInstance().log(
       'Абстрактна фабрика',
-      `${this.constructor.name} створила комплект «${this.label}»: 5 узгоджених деталей одного рівня`
+      `${this.constructor.name} створила комплект «${this.label}»: 5 узгоджених деталей одного рівня`,
+      this.constructor.name
     );
     return kit;
   }

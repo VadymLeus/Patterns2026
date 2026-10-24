@@ -18,7 +18,7 @@ class ComponentCreator {
       throw new Error(`${this.constructor.name} створює лише "${this.type}", а не "${data.type}"`);
     }
     const component = this.createComponent(data); // <- фабричний метод
-    Logger.getInstance().log('Фабричний метод', `${this.constructor.name} створив: ${component.name}`);
+    Logger.getInstance().log('Фабричний метод', `${this.constructor.name} створив: ${component.name}`, this.constructor.name);
     return component;
   }
 

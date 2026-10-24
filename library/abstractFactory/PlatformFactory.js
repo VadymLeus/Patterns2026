@@ -46,7 +46,7 @@ class PlatformFactory {
       throw new Error(`${this.constructor.name} не може створити "${data.name}": це інше сімейство`);
     }
     const product = new ProductClass(data);
-    Logger.getInstance().log('Абстрактна фабрика', `${this.constructor.name} створила: ${product.name}`);
+    Logger.getInstance().log('Абстрактна фабрика', `${this.constructor.name} створила: ${product.name}`, this.constructor.name);
     return product;
   }
 }

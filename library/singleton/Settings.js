@@ -34,7 +34,7 @@ class Settings {
   constructor() {
     if (Settings.#instance) return Settings.#instance;
     Settings.#instance = this;
-    Logger.getInstance().log('Одинак', 'Створено єдиний екземпляр Settings (валюта й тема)');
+    Logger.getInstance().log('Одинак', 'Створено єдиний екземпляр Settings (валюта й тема)', 'Settings');
   }
 
   static getInstance() {
@@ -71,7 +71,7 @@ class Settings {
   setCurrency(code) {
     if (!Settings.isCurrency(code)) throw new Error(`Невідома валюта "${code}"`);
     this.#currency = code;
-    Logger.getInstance().log('Одинак', `Валюта ${code}: усі ціни перераховує єдиний Settings`);
+    Logger.getInstance().log('Одинак', `Валюта ${code}: усі ціни перераховує єдиний Settings`, 'Settings');
     this.#notify();
     return code;
   }
@@ -79,7 +79,7 @@ class Settings {
   setTheme(theme) {
     if (!Settings.THEMES.includes(theme)) throw new Error(`Невідома тема "${theme}"`);
     this.#theme = theme;
-    Logger.getInstance().log('Одинак', `Тема оформлення: ${theme}`);
+    Logger.getInstance().log('Одинак', `Тема оформлення: ${theme}`, 'Settings');
     this.#notify();
     return theme;
   }
