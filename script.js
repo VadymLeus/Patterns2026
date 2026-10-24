@@ -39,6 +39,7 @@ logger.subscribe(appendLog);
 const prices = PriceList.getInstance(); // Одинак
 const builder = new PCBuilder(); // Будівельник, з яким працює конфігуратор
 const presets = new PresetRegistry(); // Прототипи готових збірок
+const pcView = new PcView($('pcView')); // схема збірки (лише відображення)
 const saved = []; // зібрані користувачем ПК
 const selects = {}; // slot -> <select>
 let factory = null; // поточна фабрика платформи
@@ -228,7 +229,12 @@ function renderSaved() {
     .join('');
 }
 
+function renderView() {
+  pcView.update(builder.snapshot(), builder.validate().conflicts);
+}
+
 function render() {
+  renderView();
   renderSummary();
   renderPresets();
   renderSaved();

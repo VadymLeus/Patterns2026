@@ -92,6 +92,7 @@ h3 { font-size: 1rem; }
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 16px;
+  align-items: start;
 }
 .wide { grid-column: 1 / -1; }
 
@@ -238,4 +239,67 @@ input:focus-visible, select:focus-visible, button:focus-visible {
 
 @media (max-width: 560px) {
   .log-row { flex-wrap: wrap; gap: 4px 10px; }
+}
+
+/* ---------- Схема збірки (SVG) ---------- */
+.stack { display: grid; gap: 16px; min-width: 0; }
+.pcview svg { display: block; width: 100%; max-width: 440px; height: auto; margin: 0 auto; }
+.pcview .note { margin: 10px 0 0; }
+
+/* Стани деталей: порожній слот — пунктир, на місці — акцент, конфлікт — червоний */
+.v-part .body {
+  fill: var(--field);
+  stroke: var(--muted);
+  stroke-width: 1.5;
+  stroke-dasharray: 5 4;
+  transition: fill 0.3s, stroke 0.3s;
+}
+.v-part.filled .body {
+  stroke: var(--accent);
+  stroke-dasharray: none;
+  fill: color-mix(in srgb, var(--accent) 11%, var(--card));
+}
+.v-part.bad .body {
+  stroke: var(--bad);
+  stroke-dasharray: none;
+  fill: color-mix(in srgb, var(--bad) 13%, var(--card));
+}
+#v-case .body { fill: transparent; }
+#v-case.filled .body { stroke: var(--muted); stroke-width: 2.5; fill: transparent; }
+#v-case.bad .body { stroke-width: 2.5; fill: transparent; }
+#v-motherboard.filled .body { stroke: var(--ok); fill: color-mix(in srgb, var(--ok) 9%, var(--card)); }
+
+.v-cap { font-size: 8.5px; fill: var(--muted); }
+.v-val { font-size: 10.5px; font-weight: 700; fill: var(--text); }
+.v-sub { font-size: 9px; fill: var(--muted); }
+.v-part.bad .v-val, .v-part.bad .v-sub { fill: var(--bad); }
+
+/* Блок живлення: смужка навантаження */
+.bar-bg { fill: var(--line); }
+.bar { fill: var(--ok); transition: width 0.35s ease, fill 0.3s; }
+.bar.bad { fill: var(--bad); }
+
+/* Вентилятори крутяться лише коли деталь на місці й без конфлікту */
+[data-fan] .ring { fill: none; stroke: var(--muted); stroke-width: 2; }
+[data-fan] .blade { fill: var(--muted); fill-opacity: 0.35; }
+[data-fan] .hub { fill: var(--muted); }
+[data-fan] .rotor { animation: spin 2.4s linear infinite; animation-play-state: paused; }
+.v-part.filled [data-fan] .rotor { animation-play-state: running; }
+
+/* Ігровий корпус: підсвітка RGB */
+.rgb [data-fan] .ring { stroke-width: 2.5; animation: rgb 4s linear infinite; }
+
+/* Коротка підсвітка деталі, яку щойно замінили */
+.v-part.pop .body { animation: pop 0.6s ease-out; }
+
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes pop { from { stroke-width: 5; } to { stroke-width: 1.5; } }
+@keyframes rgb {
+  0%, 100% { stroke: #ff4d6d; }
+  33% { stroke: #4dd2ff; }
+  66% { stroke: #7cff6b; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-fan] .rotor, .rgb [data-fan] .ring, .v-part.pop .body { animation: none; }
 }
