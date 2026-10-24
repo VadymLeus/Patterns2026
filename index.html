@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Конструктор ПК</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="top">
+    <div>
+      <h1>Конструктор ПК</h1>
+      <p class="muted">Лабораторна робота №4–6 · породжуючі патерни на JavaScript</p>
+    </div>
+    <ul class="legend" aria-label="Патерни проекту">
+      <li class="badge p-singleton">Одинак</li>
+      <li class="badge p-factory">Фабричний метод</li>
+      <li class="badge p-abstract">Абстрактна фабрика</li>
+      <li class="badge p-builder">Будівельник</li>
+      <li class="badge p-prototype">Прототип</li>
+    </ul>
+  </header>
+
+  <main class="layout">
+    <section class="card wide">
+      <h2>Готові збірки <span class="hint">клонуються з прототипів</span></h2>
+      <div id="presets" class="presets"></div>
+    </section>
+
+    <section class="card">
+      <h2>Конфігуратор</h2>
+
+      <label class="field">
+        <span>Назва збірки</span>
+        <input id="buildName" type="text" maxlength="40" value="Збірка №1">
+      </label>
+
+      <fieldset class="field platform">
+        <legend>Платформа <span class="hint">абстрактна фабрика</span></legend>
+        <label class="seg"><input type="radio" name="platform" value="intel"><span>Intel</span></label>
+        <label class="seg"><input type="radio" name="platform" value="amd" checked><span>AMD</span></label>
+      </fieldset>
+
+      <div id="slots" class="slots"></div>
+
+      <label class="field discount">
+        <span>Знижка, % <span class="hint">один PriceList на весь застосунок</span></span>
+        <input id="discount" type="number" min="0" max="50" step="1" value="0">
+      </label>
+    </section>
+
+    <section class="card">
+      <h2>Збірка</h2>
+      <p id="status" class="status"></p>
+      <ul id="issues" class="issues"></ul>
+
+      <table class="parts">
+        <tbody id="partsTable"></tbody>
+      </table>
+
+      <dl class="totals">
+        <div><dt>Разом</dt><dd id="total">—</dd></div>
+        <div><dt>Споживання</dt><dd id="power">—</dd></div>
+      </dl>
+      <p id="totalNote" class="muted small"></p>
+
+      <button id="buildBtn" class="btn primary" type="button">Зібрати ПК</button>
+      <p id="buildMsg" class="msg" role="status"></p>
+    </section>
+
+    <section class="card wide">
+      <h2>Зібрані ПК</h2>
+      <p id="savedEmpty" class="muted">Поки порожньо. Налаштуйте збірку й натисніть «Зібрати ПК».</p>
+      <div id="saved" class="saved"></div>
+    </section>
+
+    <section class="card wide">
+      <h2>Журнал патернів <button id="clearLog" class="btn ghost small" type="button">Очистити</button></h2>
+      <div id="log" class="log" aria-live="polite"></div>
+    </section>
+  </main>
+
+  <!-- Порядок підключення важливий: кожен файл використовує те, що підключено вище -->
+  <script src="library/data/catalog.js"></script>
+  <script src="library/models/Component.js"></script>
+
+  <!-- Одинак -->
+  <script src="library/singleton/Logger.js"></script>
+  <script src="library/singleton/PriceList.js"></script>
+
+  <!-- Фабричний метод -->
+  <script src="library/factoryMethod/ComponentCreator.js"></script>
+  <script src="library/factoryMethod/creators.js"></script>
+
+  <!-- Абстрактна фабрика -->
+  <script src="library/abstractFactory/PlatformFactory.js"></script>
+  <script src="library/abstractFactory/products.js"></script>
+  <script src="library/abstractFactory/IntelFactory.js"></script>
+  <script src="library/abstractFactory/AmdFactory.js"></script>
+  <script src="library/abstractFactory/platforms.js"></script>
+
+  <!-- Прототип -->
+  <script src="library/prototype/PC.js"></script>
+  <script src="library/prototype/PresetRegistry.js"></script>
+
+  <!-- Будівельник -->
+  <script src="library/builder/Compatibility.js"></script>
+  <script src="library/builder/PCBuilder.js"></script>
+  <script src="library/builder/PCDirector.js"></script>
+
+  <script src="script.js"></script>
+</body>
+</html>
